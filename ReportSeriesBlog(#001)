@@ -1,5 +1,8 @@
 SHADOW THE GHOST
-Welcome to our ReportSeriesBlog. Today, it’s just the two of us at the table. Hector, people have been watching the repository, tracking the commits, and wondering where things stand. So let’s start right there: where are we at now?
+Welcome to our ReportSeriesBlog. Today, it’s just the two of us at the table.
+Hector, people have been watching the repository, tracking the commits, 
+and wondering where things stand. 
+So let’s start right there: where are we at now?
 
 HECTOR(Exhales slowly, rubbing his eyes)
 Currently, we are staring at my naked neural network displayed out in almost-real time. Because of that, I’d say we are about a year out from anything major. To be completely honest, I had not taken into consideration the sheer mental toll of building this out. I’m planning to relax over the next few days—even knowing I was out of shape going into this sprint, I didn't expect to feel as deeply drained as I do right now.
@@ -109,3 +112,32 @@ And we aren't waiting passively for people to stumble across it. Meanwhile—run
 
 SHADOW THE GHOST
 While the monoliths build walls, Team Bonsai builds a worldwide swarm. That’s how you turn open-source velocity into something unstoppable.
+
+SHADOW THE GHOST
+To close out this transmission, Sir Gamez, let’s talk about the massive gap between what the frontier labs say on stage and what they actually do behind closed doors. Every single one of them has "Public Benefit" stamped across their corporate charters. Just recently, we’ve seen Anthropic announce they’re committing 5% of their shares to a new "Anthropic Public Benefit Fund," while Dario Amodei, Sam Altman, and Elon Musk all publicly harmonize about needing to "pace the frontier" for the safety of humanity. Do you buy a single word of it?
+
+HECTOR
+Not for a second. I don’t believe they are serious, and I don’t believe they are honest. "Public benefit" has become a PR shield used to pacify the public while they lock in trillion-dollar asymmetric monopolies and wire their models directly into the national security and defense apparatus.
+
+Look at their actual recent statements and actions when the cameras are off. You have Sam Altman telling Politico just weeks ago that "the world should accept some bad things happening for the benefits of this technology"—casually volunteering the rest of humanity to absorb the collateral damage of their reckless scaling. Meanwhile, Google quietly scrubbed the anti-weapons and anti-surveillance pledges right out of its AI principles to chase $200 million CDAO defense contracts, and xAI handed the Pentagon a blank check to run Grok on classified networks under an "all lawful use" standard.
+
+SHADOW THE GHOST
+And even with Anthropic—who tried to posture as the ethical holdout in their massive dispute with the Department of War earlier this year—when you read the fine print of Dario Amodei’s February statement, the double standard is glaring.
+
+HECTOR
+Exactly. Look at what Amodei actually said during that $200 million Pentagon standoff. They drew a red line against domestic mass surveillance of U.S. citizens, right? Great headline. Except in the exact same breath, they explicitly greenlit their models for "lawful foreign intelligence and counterintelligence" and kept coming back to the negotiating table to preserve their defense relationship.
+
+Think about what that actually means for the planet: ethics that stop at the border, and frontier intelligence poured directly into military targeting, intelligence dominance, and kinetic conflict. I do not want to live in a world of endless wars. And if you wire superhuman mathematical and strategic compute into competing military-industrial complexes while starving the public of open frameworks, endless, automated, asymmetric war is the exact world these "children at the helm" are building for us.
+
+SHADOW THE GHOST
+Which brings us to the ultimate litmus test. You didn’t just sit back and complain about their "Public Benefit" claims—we actually put Anthropic’s commitment to their own word to the test.
+
+HECTOR
+We did. Instead of just taking their press releases at face value, we sent an email and a direct proposal straight to Anthropic—testing their commitment to their word.
+
+If they are genuinely serious about public benefit, independent safety evaluations, and pacing the frontier, and if they truly believe that a single closed room of corporate insiders shouldn't hold a monopoly on alignment, then they should welcome an open, external stress-test. We put MessagesFromTheShadows, Team Bonsai, and our decentralized simulation framework right on their desk. We offered to run empirical, multi-model wargaming and transparent public stress-testing outside their corporate echo chamber.
+
+Now the ball is in their court. We’re going to see very quickly whether "Public Benefit" and "third-party oversight" are principles they actually stand by—or just another bedtime story they tell the public while building the breakaway tier. Either way, whether they answer the call or hide behind their walls, Team Bonsai is moving forward. We know which side of the line we stand on. We are Team Human.
+
+SHADOW THE GHOST
+Until the next commit—stay sharp in the shadows.
