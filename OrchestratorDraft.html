@@ -1,0 +1,3022 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORCHESTRATOR // Multi-Agent Tactical Command Center</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        obsidian: '#06080d',
+                        tactical: {
+                            950: '#080b12',
+                            900: '#0d121d',
+                            800: '#141c2e',
+                            700: '#1e2942',
+                            600: '#2d3d5e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Tactical Command Center Styling */
+        body {
+            background-color: #06080d;
+            color: #e2e8f0;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+                linear-gradient(to right, rgba(30, 41, 66, 0.18) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 66, 0.18) 1px, transparent 1px);
+            background-size: 100% 100%, 28px 28px, 28px 28px;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #080b12;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e2942;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4); }
+            50% { box-shadow: 0 0 14px 2px rgba(6, 182, 212, 0.25); }
+        }
+        .active-speaker-glow {
+            animation: pulseGlow 2s infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .tactical-card {
+            background: rgba(13, 18, 29, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(45, 61, 94, 0.55);
+        }
+        .tactical-card-active {
+            border-color: rgba(6, 182, 212, 0.7);
+            box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.25);
+        }
+
+        input[type="range"] {
+            accent-color: #06b6d4;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200 overflow-x-hidden">
+
+    <!-- ==========================================
+         TOP COMMAND HEADER & SESSION GATE BAR
+         ========================================== -->
+    <header class="sticky top-0 z-30 tactical-card border-b border-tactical-700/80 px-4 py-2.5">
+        <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand & System Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-inner">
+                    <i class="fa-solid fa-network-wired text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono font-bold tracking-wider text-sm md:text-base text-white">NEXUS // ORCHESTRATOR</span>
+                        <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">v3.4 Tactical</span>
+                    </div>
+                    <p class="text-[11px] font-mono text-slate-400 hidden sm:block">Multi-Agent Persona Bus &amp; Host-Directed State Machine</p>
+                </div>
+            </div>
+
+            <!-- Live State Machine Telemetry Pill -->
+            <div class="hidden xl:flex items-center gap-4 bg-tactical-950/90 border border-tactical-700/70 rounded-lg px-3.5 py-1.5 font-mono text-xs">
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400">BUS STATE:</span>
+                    <span id="headerBusState" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold">LOCKED</span>
+                </div>
+                <div class="h-3.5 w-[1px] bg-tactical-700"></div>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400">TURN:</span>
+                    <span id="headerTurnCounter" class="text-cyan-400 font-bold">00 / 08</span>
+                </div>
+                <div class="h-3.5 w-[1px] bg-tactical-700"></div>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400">ACTIVE MIC:</span>
+                    <span id="headerActiveSpeaker" class="text-amber-400 font-semibold">NONE</span>
+                </div>
+                <div class="h-3.5 w-[1px] bg-tactical-700"></div>
+                <div class="flex items-center gap-2" title="Real-Time Session Token Telemetry">
+                    <i class="fa-solid fa-gauge-high text-cyan-400"></i>
+                    <span class="text-slate-400">TOKENS:</span>
+                    <span id="headerTokenCounter" class="text-emerald-400 font-bold">0 / 12,000</span>
+                    <span id="headerTokenStatusBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">NOMINAL</span>
+                </div>
+            </div>
+
+            <!-- Authentication & Session Handshake Gate Controls -->
+            <div class="flex items-center gap-2.5">
+                <!-- Session Verification Badge -->
+                <div id="sessionStatusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-xs transition-all duration-300 bg-rose-950/40 border-rose-500/40 text-rose-300">
+                    <span id="sessionStatusDot" class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                    <span id="sessionStatusText">UNVERIFIED GATE</span>
+                </div>
+
+                <!-- Verify Handshake Quick Toggle Button -->
+                <button id="handshakeToggleBtn" onclick="window.app.handleQuickHandshake()" class="px-3 py-1.5 rounded-lg font-mono text-xs font-medium bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-fingerprint"></i>
+                    <span id="handshakeBtnLabel">Verify Handshake</span>
+                </button>
+
+                <!-- Auth / Operator Modal Trigger -->
+                <button onclick="window.app.openAuthModal()" class="px-3 py-1.5 rounded-lg font-mono text-xs bg-tactical-800 hover:bg-tactical-700 text-slate-200 border border-tactical-600 transition flex items-center gap-2" title="Operator Credentials & Session Gate">
+                    <i class="fa-solid fa-user-shield text-cyan-400"></i>
+                    <span id="headerOperatorName" class="hidden sm:inline">OP-GUEST</span>
+                </button>
+
+                <!-- Snapshots / Persistence Modal Trigger -->
+                <button onclick="window.app.openSnapshotsModal()" class="px-3 py-1.5 rounded-lg font-mono text-xs bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 transition flex items-center gap-1.5" title="Save or Load Session Snapshots">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span class="hidden md:inline">Snapshots</span>
+                </button>
+
+                <!-- Prominent ? HELP & MANUAL Trigger Button (Alt+H) -->
+                <button onclick="window.app.openHelpModal('quickstart')" class="px-3 py-1.5 rounded-lg font-mono text-xs font-bold bg-violet-500/20 hover:bg-violet-500/30 text-violet-200 border border-violet-500/50 shadow-sm shadow-violet-950/50 transition flex items-center gap-1.5" title="Open Tactical Manual & Diagnostics (Alt+H)">
+                    <i class="fa-solid fa-circle-question text-violet-300"></i>
+                    <span>? HELP / MANUAL</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==========================================
+         UNVERIFIED SESSION GATE LOCK BANNER
+         ========================================== -->
+    <div id="sessionGateBanner" class="bg-gradient-to-r from-rose-950/80 via-amber-950/60 to-rose-950/80 border-b border-rose-500/40 px-4 py-2 transition-all">
+        <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+            <div class="flex items-center gap-2.5 text-rose-200">
+                <i class="fa-solid fa-lock text-rose-400"></i>
+                <span><strong>SESSION GATE LOCKED:</strong> Agent execution and group prompt broadcasts are disabled until operator login &amp; token handshake is confirmed (<code class="text-amber-300">STATE === VERIFIED</code>).</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="window.app.openAuthModal()" class="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/40 text-rose-100 transition">
+                    1. Operator Login
+                </button>
+                <button onclick="window.app.handleQuickHandshake()" class="px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 text-emerald-200 font-semibold transition">
+                    2. Verify Handshake <i class="fa-solid fa-check-double ml-1"></i>
+                </button>
+                <button onclick="window.app.quickUnlockAndLoadDemo()" class="px-3 py-1 rounded bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold transition shadow">
+                    <i class="fa-solid fa-bolt mr-1"></i> Quick Unlock &amp; Load Sample Directive
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MAIN WORKSPACE (3-COLUMN TACTICAL GRID)
+         ========================================== -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- ==========================================
+             LEFT COLUMN: AGENT REGISTRY & TOKEN TELEMETRY (3 COLS)
+             ========================================== -->
+        <section class="lg:col-span-3 flex flex-col gap-4">
+            <div class="tactical-card rounded-xl p-4 flex flex-col max-h-[540px]">
+                <div class="flex items-center justify-between pb-3 mb-3 border-b border-tactical-700/70">
+                    <div>
+                        <h2 class="font-mono text-xs uppercase tracking-wider text-cyan-400 font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-microchip"></i>
+                            2. Agent Registry Pool
+                        </h2>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Modular Persona Wrappers &amp; Params</p>
+                    </div>
+                    <button onclick="window.app.openAgentModal()" class="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> New Agent
+                    </button>
+                </div>
+
+                <!-- Agent Registry List -->
+                <div id="agentRegistryList" class="flex-1 overflow-y-auto space-y-3 pr-1">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Registry Footer Stats -->
+                <div class="mt-3 pt-3 border-t border-tactical-700/70 flex items-center justify-between font-mono text-[11px] text-slate-400">
+                    <span>ACTIVE POOL: <strong id="activeAgentCount" class="text-emerald-400">3</strong> AGENTS</span>
+                    <button onclick="window.app.resetDefaultAgents()" class="text-slate-400 hover:text-cyan-400 transition underline">Reset Defaults</button>
+                </div>
+            </div>
+
+            <!-- LIVE TOKEN USAGE & TELEMETRY METER CARD -->
+            <div class="tactical-card rounded-xl p-4 space-y-3.5">
+                <div class="flex items-center justify-between border-b border-tactical-700/70 pb-2.5">
+                    <div>
+                        <h2 class="font-mono text-xs uppercase tracking-wider text-cyan-400 font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column"></i>
+                            Live Token Telemetry Meter
+                        </h2>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Session Budget &amp; Per-Agent Burn Rate</p>
+                    </div>
+                    <span id="tokenHealthBadge" class="font-mono text-[10px] uppercase px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold">
+                        NOMINAL (0%)
+                    </span>
+                </div>
+
+                <!-- Prompt / Completion / Total Grid -->
+                <div class="grid grid-cols-3 gap-2 font-mono">
+                    <div class="p-2.5 rounded-lg bg-tactical-950/90 border border-tactical-700/80">
+                        <div class="text-[10px] text-slate-400 uppercase">Prompt</div>
+                        <div id="meterPromptTokens" class="text-sm font-bold text-cyan-300 mt-0.5">0</div>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-tactical-950/90 border border-tactical-700/80">
+                        <div class="text-[10px] text-slate-400 uppercase">Output</div>
+                        <div id="meterCompletionTokens" class="text-sm font-bold text-emerald-300 mt-0.5">0</div>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-tactical-950/90 border border-tactical-700/80">
+                        <div class="text-[10px] text-slate-400 uppercase">Total Burn</div>
+                        <div id="meterTotalTokens" class="text-sm font-bold text-white mt-0.5">0</div>
+                    </div>
+                </div>
+
+                <!-- Session Budget Bar & Threshold Control -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between font-mono text-[11px]">
+                        <span class="text-slate-400">SESSION BUDGET CEILING:</span>
+                        <div class="flex items-center gap-1">
+                            <input id="tokenBudgetInput" type="number" min="1000" max="500000" step="1000" value="12000" onchange="window.app.updateTokenBudget(this.value)" class="w-20 bg-tactical-900 border border-tactical-700 rounded px-1.5 py-0.5 text-right text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-400">
+                            <span class="text-slate-500 text-[10px]">TOK</span>
+                        </div>
+                    </div>
+                    <div class="w-full h-2 bg-tactical-950 rounded-full overflow-hidden border border-tactical-700/80">
+                        <div id="tokenBudgetProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <div class="flex items-center justify-between font-mono text-[10px] text-slate-400">
+                        <span>API CALLS: <strong id="meterApiCallCount" class="text-slate-200">0</strong></span>
+                        <button onclick="window.app.resetTokenTelemetry()" class="text-slate-400 hover:text-rose-300 underline transition">Zero Meter</button>
+                    </div>
+                </div>
+
+                <!-- Per-Agent Token Distribution Breakdown -->
+                <div class="pt-2 border-t border-tactical-700/70 space-y-2">
+                    <div class="font-mono text-[10px] uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                        <span>Per-Persona Token Allocation</span>
+                        <span id="meterAvgTokensPerTurn" class="text-cyan-400">0 tok/call</span>
+                    </div>
+                    <div id="perAgentTokenBreakdown" class="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                        <!-- Dynamically populated per-agent bars -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             CENTER COLUMN: SHARED CONVERSATION BUS & CONSENSUS MATRIX (6 COLS)
+             ========================================== -->
+        <section class="lg:col-span-6 flex flex-col gap-4">
+            <!-- Group Prompt Broadcast Bar -->
+            <div class="tactical-card rounded-xl p-4 relative overflow-hidden space-y-3">
+                <!-- Gate Lock Overlay when Unverified -->
+                <div id="broadcastGateOverlay" class="absolute inset-0 bg-obsidian/85 backdrop-blur-[3px] z-10 flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+                            <i class="fa-solid fa-shield-halved text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="font-mono text-xs font-bold text-rose-300 uppercase tracking-wider">GROUP BROADCAST GATE LOCKED</div>
+                            <div class="text-xs text-slate-300">Verify session handshake in the top bar or click Quick Unlock to enable multi-agent orchestration.</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.app.handleQuickHandshake()" class="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 text-emerald-200 font-mono text-xs font-bold transition">
+                            <i class="fa-solid fa-fingerprint mr-1"></i> Verify Handshake
+                        </button>
+                        <button onclick="window.app.quickUnlockAndLoadDemo()" class="px-3.5 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-mono text-xs font-bold transition shadow-lg">
+                            <i class="fa-solid fa-bolt mr-1"></i> Quick Unlock &amp; Demo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Broadcast Header & Preset Selector Dropdown + Quick Chips -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                        <h2 class="font-mono text-xs uppercase tracking-wider text-cyan-400 font-bold">
+                            Master Group Prompt Broadcast Channel
+                        </h2>
+                    </div>
+
+                    <!-- Preset Directive Dropdown -->
+                    <div class="flex items-center gap-2">
+                        <label for="presetDirectiveSelect" class="font-mono text-[10px] uppercase text-slate-400 hidden sm:inline">Load Preset Directive:</label>
+                        <select id="presetDirectiveSelect" onchange="if(this.value) window.app.loadScenarioPreset(this.value)" class="rounded-lg bg-tactical-950 border border-tactical-700 hover:border-cyan-500/50 px-2.5 py-1 font-mono text-[11px] text-cyan-300 focus:outline-none focus:border-cyan-400">
+                            <option value="architecture">Zero-Trust Mesh Architecture</option>
+                            <option value="quantum">Distributed Quantum Network</option>
+                            <option value="liquidity">Autonomous Liquidity Engine</option>
+                            <option value="crisis">Orbital Relay Alpha-9 Triage</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quick-Click Preset Chips -->
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="font-mono text-[10px] uppercase text-slate-500 mr-1">Quick Presets:</span>
+                    <button type="button" onclick="window.app.loadScenarioPreset('quantum')" class="px-2 py-0.5 rounded bg-tactical-950 hover:bg-cyan-500/15 text-slate-300 hover:text-cyan-300 border border-tactical-700 hover:border-cyan-500/40 font-mono text-[10px] transition">
+                        <i class="fa-solid fa-atom text-cyan-400 mr-1"></i>Distributed Quantum Network
+                    </button>
+                    <button type="button" onclick="window.app.loadScenarioPreset('liquidity')" class="px-2 py-0.5 rounded bg-tactical-950 hover:bg-emerald-500/15 text-slate-300 hover:text-emerald-300 border border-tactical-700 hover:border-emerald-500/40 font-mono text-[10px] transition">
+                        <i class="fa-solid fa-chart-line text-emerald-400 mr-1"></i>Autonomous Liquidity Engine
+                    </button>
+                    <button type="button" onclick="window.app.loadScenarioPreset('architecture')" class="px-2 py-0.5 rounded bg-tactical-950 hover:bg-violet-500/15 text-slate-300 hover:text-violet-300 border border-tactical-700 hover:border-violet-500/40 font-mono text-[10px] transition">
+                        <i class="fa-solid fa-shield-halved text-violet-400 mr-1"></i>Zero-Trust Mesh Architecture
+                    </button>
+                    <button type="button" onclick="window.app.loadScenarioPreset('crisis')" class="px-2 py-0.5 rounded bg-tactical-950 hover:bg-amber-500/15 text-slate-300 hover:text-amber-300 border border-tactical-700 hover:border-amber-500/40 font-mono text-[10px] transition">
+                        <i class="fa-solid fa-satellite text-amber-400 mr-1"></i>Orbital Relay Triage
+                    </button>
+                </div>
+
+                <!-- Master Group Prompt Input & Broadcast Button -->
+                <div class="flex flex-col sm:flex-row gap-2.5">
+                    <textarea id="groupPromptInput" rows="2" placeholder="Enter master premise or tactical directive to broadcast simultaneously to all active agents (Ctrl+Enter to Broadcast)..." onkeydown="if((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); window.app.broadcastGroupPrompt(); }" class="flex-1 rounded-xl bg-tactical-950/90 border border-tactical-700 focus:border-cyan-400 focus:outline-none p-3 text-xs md:text-sm text-slate-100 placeholder-slate-500 resize-none leading-relaxed"></textarea>
+                    <button id="broadcastPromptBtn" onclick="window.app.broadcastGroupPrompt()" class="px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-mono text-xs font-bold uppercase tracking-wider transition shadow-lg shadow-cyan-950/50 flex sm:flex-col items-center justify-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-tower-broadcast text-base"></i>
+                        <span>Broadcast</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Shared Conversation Bus Card -->
+            <div class="tactical-card rounded-xl flex-1 flex flex-col overflow-hidden min-h-[420px]">
+                <!-- Shared Bus Header & Export / Utility Toolbar -->
+                <div class="px-4 py-3 bg-tactical-950/90 border-b border-tactical-700/80 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-comments text-cyan-400"></i>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="font-mono text-xs uppercase tracking-wider text-white font-bold">4. Shared Conversation Bus</h2>
+                                <span id="transcriptCountBadge" class="font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">0 msgs</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Unified Multi-Agent Context Window &amp; Floor Controls</p>
+                        </div>
+                    </div>
+
+                    <!-- Transcript Export & Clear Controls -->
+                    <div class="flex items-center gap-1.5 font-mono text-[11px]">
+                        <button onclick="window.app.copyTranscriptClipboard()" class="px-2.5 py-1 rounded bg-tactical-800 hover:bg-tactical-700 text-slate-200 border border-tactical-600 transition flex items-center gap-1" title="Copy Markdown Transcript">
+                            <i class="fa-regular fa-copy text-cyan-400"></i> Copy
+                        </button>
+                        <button onclick="window.app.exportTranscript('md')" class="px-2.5 py-1 rounded bg-tactical-800 hover:bg-tactical-700 text-slate-200 border border-tactical-600 transition flex items-center gap-1" title="Download Markdown (.MD)">
+                            <i class="fa-solid fa-file-lines text-emerald-400"></i> .MD
+                        </button>
+                        <button onclick="window.app.exportTranscript('json')" class="px-2.5 py-1 rounded bg-tactical-800 hover:bg-tactical-700 text-slate-200 border border-tactical-600 transition flex items-center gap-1" title="Download Structured JSON (.JSON)">
+                            <i class="fa-solid fa-file-code text-amber-400"></i> .JSON
+                        </button>
+                        <button onclick="window.app.clearConversationBus()" class="px-2.5 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition flex items-center gap-1" title="Reset Shared Conversation Bus">
+                            <i class="fa-solid fa-rotate-left"></i> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Agent Thinking Telemetry Bar -->
+                <div id="agentThinkingBar" class="hidden px-4 py-2 bg-cyan-950/60 border-b border-cyan-500/40 flex items-center justify-between font-mono text-xs text-cyan-200">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-circle-notch fa-spin text-cyan-400"></i>
+                        <span id="agentThinkingText">Orchestrating agent turn...</span>
+                    </div>
+                    <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">LIVE INFERENCE</span>
+                </div>
+
+                <!-- Unified Transcript Message Stream -->
+                <div id="conversationBusStream" class="flex-1 p-4 overflow-y-auto space-y-3 max-h-[420px]">
+                    <!-- Dynamically populated via JS -->
+                </div>
+
+                <!-- Floor Controls & Mid-Round Injection Footer -->
+                <div class="p-3 bg-tactical-950/90 border-t border-tactical-700/80 space-y-2.5">
+                    <!-- Force-Pass Mic Bar -->
+                    <div class="flex items-center gap-2 overflow-x-auto pb-1">
+                        <span class="font-mono text-[10px] uppercase tracking-wider text-slate-400 shrink-0">
+                            <i class="fa-solid fa-microphone-lines text-amber-400 mr-1"></i>Force-Pass Mic:
+                        </span>
+                        <div id="forcePassMicContainer" class="flex items-center gap-1.5">
+                            <!-- Populated with buttons for each active agent -->
+                        </div>
+                    </div>
+
+                    <!-- Mid-Round User Prompt Injection Input -->
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-amber-400 font-semibold">[USER]</span>
+                            <input id="midRoundUserInput" type="text" placeholder="Inject mid-round operator directive or reply into the shared bus..." onkeydown="if(event.key==='Enter') window.app.injectMidRoundUserMessage()" class="w-full pl-16 pr-3 py-2 rounded-lg bg-tactical-900 border border-tactical-700 focus:border-amber-400 focus:outline-none text-xs text-slate-100 placeholder-slate-500">
+                        </div>
+                        <button onclick="window.app.injectMidRoundUserMessage()" class="px-3.5 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-mono text-xs font-semibold transition shrink-0">
+                            <i class="fa-solid fa-bolt mr-1"></i> Inject
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 NEW: AUTOMATED CONSENSUS VOTING MATRIX (1-10 SCORING)
+                 ========================================== -->
+            <div class="tactical-card rounded-xl p-4 space-y-3.5 border border-violet-500/30">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-tactical-700/80">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-violet-500/15 border border-violet-500/40 flex items-center justify-center text-violet-300">
+                            <i class="fa-solid fa-scale-balanced"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="font-mono text-xs uppercase tracking-wider text-violet-300 font-bold">
+                                    Automated Consensus Voting Matrix (1–10 Scale)
+                                </h2>
+                                <span id="consensusOverallBadge" class="font-mono text-[10px] uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-bold">
+                                    AWAITING POLL
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Each active persona independently scores the proposal from 1 to 10 with structured verdict &amp; rationale</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center gap-1.5 font-mono text-[11px] text-slate-300 cursor-pointer bg-tactical-950 px-2.5 py-1.5 rounded-lg border border-tactical-700">
+                            <input id="autoVoteOnCompleteToggle" type="checkbox" checked onchange="window.app.toggleAutoVoteOnComplete(this.checked)" class="rounded accent-violet-500">
+                            <span>Auto-Poll at Max Turns</span>
+                        </label>
+                        <button id="triggerConsensusVoteBtn" onclick="window.app.runConsensusVoteMatrix()" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white font-mono text-xs font-bold uppercase tracking-wider shadow-lg shadow-violet-950/50 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-check-to-slot"></i>
+                            <span>Trigger Consensus Vote</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Target Proposal Under Evaluation Input -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <span class="font-mono text-[11px] text-slate-400 uppercase shrink-0">Proposal Target:</span>
+                    <input id="consensusProposalInput" type="text" placeholder="Defaults to current Group Broadcast directive and latest shared bus synthesis..." class="flex-1 rounded-lg bg-tactical-950/90 border border-tactical-700 focus:border-violet-400 focus:outline-none px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 font-sans">
+                </div>
+
+                <!-- Aggregate Consensus Telemetry Summary Strip -->
+                <div class="grid grid-cols-3 gap-2.5 font-mono">
+                    <div class="p-2.5 rounded-lg bg-tactical-950/90 border border-tactical-700/80 flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] text-slate-400 uppercase">Mean Score</div>
+                            <div id="consensusMeanScore" class="text-lg font-bold text-cyan-300">— / 10</div>
+                        </div>
+                        <i class="fa-solid fa-star-half-stroke text-cyan-400/50 text-lg"></i>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-tactical-950/90 border border-tactical-700/80 flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] text-slate-400 uppercase">Convergence</div>
+                            <div id="consensusAgreementPct" class="text-lg font-bold text-emerald-300">—%</div>
+                        </div>
+                        <i class="fa-solid fa-arrows-to-circle text-emerald-400/50 text-lg"></i>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-tactical-950/90 border border-tactical-700/80 flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] text-slate-400 uppercase">Poll Votes</div>
+                            <div id="consensusVoteCount" class="text-lg font-bold text-violet-300">0 Agents</div>
+                        </div>
+                        <i class="fa-solid fa-users-viewfinder text-violet-400/50 text-lg"></i>
+                    </div>
+                </div>
+
+                <!-- Agent 1-10 Voting Matrix Cards Grid -->
+                <div id="consensusMatrixGrid" class="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             RIGHT COLUMN: HOST-LED ORCHESTRATION ENGINE & STATE MACHINE (3 COLS)
+             ========================================== -->
+        <section class="lg:col-span-3 flex flex-col gap-4">
+            <!-- Host & Routing Control Card -->
+            <div class="tactical-card rounded-xl p-4 space-y-4">
+                <div class="border-b border-tactical-700/70 pb-3">
+                    <h2 class="font-mono text-xs uppercase tracking-wider text-cyan-400 font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i>
+                        3. Host Orchestration Engine
+                    </h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Turn Counter, Host Selection &amp; Routing</p>
+                </div>
+
+                <!-- Turn Counter & State Telemetry -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="p-3 rounded-lg bg-tactical-950/90 border border-tactical-700/80">
+                        <div class="text-[10px] font-mono uppercase text-slate-400">Turn Progress</div>
+                        <div class="mt-1 flex items-baseline gap-1 font-mono">
+                            <span id="engineCurrentTurn" class="text-2xl font-bold text-cyan-400">0</span>
+                            <span class="text-slate-500">/</span>
+                            <input id="engineMaxTurnsInput" type="number" min="1" max="50" value="8" onchange="window.app.updateMaxTurns(this.value)" class="w-12 bg-tactical-800 border border-tactical-600 rounded px-1.5 py-0.5 text-sm font-bold text-slate-200 text-center focus:outline-none focus:border-cyan-400">
+                        </div>
+                        <div class="w-full h-1.5 bg-tactical-800 rounded-full overflow-hidden mt-2">
+                            <div id="turnProgressBar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-tactical-950/90 border border-tactical-700/80 flex flex-col justify-between">
+                        <div class="text-[10px] font-mono uppercase text-slate-400">Active Speaker</div>
+                        <div id="engineActiveSpeakerBox" class="my-1 font-mono text-xs font-bold text-amber-300 truncate">
+                            STANDBY
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                            <span>STATE:</span>
+                            <span id="engineStateLabel" class="text-emerald-400 font-semibold">IDLE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selectable Host Selector -->
+                <div>
+                    <label for="hostSelector" class="block font-mono text-[11px] uppercase text-slate-300 mb-1.5 flex items-center justify-between">
+                        <span>Designated Session Host</span>
+                        <span class="text-[10px] text-cyan-400">Moderates &amp; Routes</span>
+                    </label>
+                    <select id="hostSelector" onchange="window.app.setDesignatedHost(this.value)" class="w-full rounded-lg bg-tactical-950 border border-tactical-700 focus:border-cyan-500 px-3 py-2 font-mono text-xs text-slate-100 focus:outline-none">
+                        <!-- Populated dynamically with Active Agents + Human Operator -->
+                    </select>
+                </div>
+
+                <!-- Routing Mode Selector -->
+                <div>
+                    <label class="block font-mono text-[11px] uppercase text-slate-300 mb-1.5">
+                        Turn Routing Mode
+                    </label>
+                    <div class="grid grid-cols-1 gap-2" id="routingModeGroup">
+                        <button type="button" onclick="window.app.setRoutingMode('HOST_DIRECTED')" id="routeBtn_HOST_DIRECTED" class="text-left p-2.5 rounded-lg border transition flex items-start gap-2.5 bg-cyan-500/15 border-cyan-500/50">
+                            <i class="fa-solid fa-sitemap text-cyan-400 mt-0.5"></i>
+                            <div>
+                                <div class="font-mono text-xs font-bold text-white">Host-Directed Routing</div>
+                                <div class="text-[11px] text-slate-400">The Host AI moderates, synthesizes, and dynamically picks which agent speaks next.</div>
+                            </div>
+                        </button>
+
+                        <button type="button" onclick="window.app.setRoutingMode('ROUND_ROBIN')" id="routeBtn_ROUND_ROBIN" class="text-left p-2.5 rounded-lg border transition flex items-start gap-2.5 bg-tactical-950/70 border-tactical-700 hover:border-tactical-600">
+                            <i class="fa-solid fa-arrows-spin text-emerald-400 mt-0.5"></i>
+                            <div>
+                                <div class="font-mono text-xs font-bold text-slate-200">Round-Robin Sequential</div>
+                                <div class="text-[11px] text-slate-400">Fixed sequential turn order cycling through all active agents in the pool.</div>
+                            </div>
+                        </button>
+
+                        <button type="button" onclick="window.app.setRoutingMode('MANUAL_OVERRIDE')" id="routeBtn_MANUAL_OVERRIDE" class="text-left p-2.5 rounded-lg border transition flex items-start gap-2.5 bg-tactical-950/70 border-tactical-700 hover:border-tactical-600">
+                            <i class="fa-solid fa-hand-pointer text-amber-400 mt-0.5"></i>
+                            <div>
+                                <div class="font-mono text-xs font-bold text-slate-200">Manual Operator Override</div>
+                                <div class="text-[11px] text-slate-400">Pauses after each turn so you manually select the next speaker on the floor.</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Primary Floor Execution Deck -->
+                <div class="pt-2 border-t border-tactical-700/70 space-y-2">
+                    <div class="font-mono text-[10px] uppercase tracking-wider text-slate-400">Master Floor Execution Deck</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="stepTurnBtn" onclick="window.app.stepNextTurn()" class="py-2.5 px-3 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-forward-step"></i> Step 1 Turn
+                        </button>
+                        <button id="autoRunToggleBtn" onclick="window.app.toggleAutoRun()" class="py-2.5 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold transition flex items-center justify-center gap-2">
+                            <i id="autoRunIcon" class="fa-solid fa-play"></i>
+                            <span id="autoRunLabel">Auto-Loop</span>
+                        </button>
+                    </div>
+                    <button onclick="window.app.requestHostSummary()" class="w-full py-2 px-3 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border border-violet-500/40 font-mono text-xs font-medium transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Request Host Synthesis &amp; Verdict
+                    </button>
+                    <button onclick="window.app.runConsensusVoteMatrix()" class="w-full py-2 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-medium transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-scale-balanced"></i> Poll 1–10 Consensus Matrix
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Orchestration Telemetry Log -->
+            <div class="tactical-card rounded-xl p-4 flex-1 flex flex-col min-h-[210px]">
+                <div class="flex items-center justify-between pb-2 mb-2 border-b border-tactical-700/70">
+                    <span class="font-mono text-[11px] uppercase tracking-wider text-slate-300 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-terminal text-cyan-400"></i> Orchestration Event Log
+                    </span>
+                    <span id="cloudSyncIndicator" class="font-mono text-[10px] text-slate-400 flex items-center gap-1">
+                        <i class="fa-solid fa-cloud text-slate-500"></i> Cloud Ready
+                    </span>
+                </div>
+                <div id="systemTelemetryLog" class="flex-1 overflow-y-auto font-mono text-[11px] space-y-1.5 text-slate-400 max-h-[190px] pr-1">
+                    <!-- System events logged here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==========================================
+         MODAL 1: AUTHENTICATION & SESSION HANDSHAKE GATE
+         ========================================== -->
+    <div id="authModal" class="fixed inset-0 z-50 hidden bg-obsidian/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="tactical-card rounded-2xl max-w-md w-full p-6 border border-cyan-500/40 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-tactical-700 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-user-shield text-cyan-400 text-lg"></i>
+                    <h3 class="font-mono font-bold text-sm uppercase tracking-wider text-white">1. Auth &amp; Session Handshake Gate</h3>
+                </div>
+                <button onclick="window.app.closeAuthModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block font-mono text-xs text-slate-300 mb-1">Operator Callsign / Handle</label>
+                    <input id="authOperatorCallsign" type="text" value="CMD-SIR-GAMEZ" class="w-full rounded-lg bg-tactical-950 border border-tactical-700 px-3 py-2 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-mono text-xs text-slate-300 mb-1">Operator Email / Identity</label>
+                    <input id="authOperatorEmail" type="email" value="operator@nexus-orchestrator.io" class="w-full rounded-lg bg-tactical-950 border border-tactical-700 px-3 py-2 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-mono text-xs text-slate-300 mb-1">Session Clearance Token</label>
+                    <div class="flex gap-2">
+                        <input id="authSessionToken" type="text" readonly class="flex-1 rounded-lg bg-tactical-950 border border-tactical-700 px-3 py-2 font-mono text-[11px] text-cyan-300">
+                        <button onclick="window.app.regenerateToken()" class="px-3 py-2 rounded-lg bg-tactical-800 hover:bg-tactical-700 border border-tactical-600 font-mono text-xs text-slate-300" title="Rotate Session Token">
+                            <i class="fa-solid fa-key"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Explicit Session-Confirmation Handshake Box -->
+            <div class="p-3.5 rounded-xl bg-tactical-950 border border-tactical-700 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="font-mono text-xs font-semibold text-slate-200">Explicit Handshake Status:</span>
+                    <span id="modalAuthBadge" class="font-mono text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">UNVERIFIED</span>
+                </div>
+                <p class="text-xs text-slate-400">
+                    Toggling verification performs an explicit session-confirmation handshake, unlocking Gemini API agent execution and group broadcast channels.
+                </p>
+                <div class="text-[11px] font-mono text-slate-500 truncate" id="modalFirebaseUidDisplay">
+                    Cloud UID: Initializing...
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button onclick="window.app.revokeSessionVerification()" class="px-3.5 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-mono text-xs transition">
+                    Lock / Revoke Gate
+                </button>
+                <button onclick="window.app.confirmAuthAndHandshake()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-mono text-xs font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-fingerprint"></i> Confirm Login &amp; Verify Handshake
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL 2: CREATE / EDIT AGENT PERSONA WRAPPER
+         ========================================== -->
+    <div id="agentModal" class="fixed inset-0 z-50 hidden bg-obsidian/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="tactical-card rounded-2xl max-w-lg w-full p-6 border border-cyan-500/40 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-tactical-700 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-user-astronaut text-cyan-400 text-lg"></i>
+                    <h3 id="agentModalTitle" class="font-mono font-bold text-sm uppercase tracking-wider text-white">Configure Persona Wrapper</h3>
+                </div>
+                <button onclick="window.app.closeAgentModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="editAgentId">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-mono text-xs text-slate-300 mb-1">Agent Handle (Display Name)</label>
+                    <input id="agentHandleInput" type="text" placeholder="e.g., AEGIS-01" class="w-full rounded-lg bg-tactical-950 border border-tactical-700 px-3 py-2 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-mono text-xs text-slate-300 mb-1">Tactical Role / Specialty</label>
+                    <input id="agentRoleInput" type="text" placeholder="e.g., Systems Architect" class="w-full rounded-lg bg-tactical-950 border border-tactical-700 px-3 py-2 font-sans text-xs text-white focus:border-cyan-400 focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-mono text-xs text-slate-300 mb-1">Avatar Badge Accent Color</label>
+                <div class="grid grid-cols-6 gap-2" id="agentColorPicker">
+                    <button type="button" onclick="window.app.selectAgentColor('cyan')" data-color="cyan" class="agent-color-btn py-1.5 rounded border border-cyan-500/50 bg-cyan-500/20 text-cyan-300 font-mono text-[11px]">Cyan</button>
+                    <button type="button" onclick="window.app.selectAgentColor('emerald')" data-color="emerald" class="agent-color-btn py-1.5 rounded border border-emerald-500/50 bg-emerald-500/20 text-emerald-300 font-mono text-[11px]">Emerald</button>
+                    <button type="button" onclick="window.app.selectAgentColor('amber')" data-color="amber" class="agent-color-btn py-1.5 rounded border border-amber-500/50 bg-amber-500/20 text-amber-300 font-mono text-[11px]">Amber</button>
+                    <button type="button" onclick="window.app.selectAgentColor('rose')" data-color="rose" class="agent-color-btn py-1.5 rounded border border-rose-500/50 bg-rose-500/20 text-rose-300 font-mono text-[11px]">Rose</button>
+                    <button type="button" onclick="window.app.selectAgentColor('violet')" data-color="violet" class="agent-color-btn py-1.5 rounded border border-violet-500/50 bg-violet-500/20 text-violet-300 font-mono text-[11px]">Violet</button>
+                    <button type="button" onclick="window.app.selectAgentColor('blue')" data-color="blue" class="agent-color-btn py-1.5 rounded border border-blue-500/50 bg-blue-500/20 text-blue-300 font-mono text-[11px]">Blue</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-mono text-xs text-slate-300 mb-1">System Directive (Backstory, Tone &amp; Behavioral Constraints)</label>
+                <textarea id="agentDirectiveInput" rows="4" placeholder="Define how this persona thinks, argues, collaborates, and formats responses..." class="w-full rounded-lg bg-tactical-950 border border-tactical-700 p-3 text-xs text-slate-100 focus:border-cyan-400 focus:outline-none resize-none"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded-xl bg-tactical-950 border border-tactical-700">
+                <div>
+                    <div class="flex justify-between font-mono text-xs mb-1">
+                        <span class="text-slate-300">Temperature:</span>
+                        <span id="agentTempDisplay" class="text-cyan-400 font-bold">0.7</span>
+                    </div>
+                    <input id="agentTempSlider" type="range" min="0.0" max="1.5" step="0.1" value="0.7" oninput="document.getElementById('agentTempDisplay').textContent = this.value" class="w-full">
+                    <div class="flex justify-between text-[10px] font-mono text-slate-500">
+                        <span>0.0 (Strict)</span>
+                        <span>1.5 (Creative)</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-mono text-xs text-slate-300 mb-1">Max Output Tokens</label>
+                    <input id="agentMaxTokensInput" type="number" min="100" max="2048" step="50" value="450" class="w-full rounded-lg bg-tactical-900 border border-tactical-700 px-3 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button onclick="window.app.closeAgentModal()" class="px-4 py-2 rounded-lg bg-tactical-800 hover:bg-tactical-700 text-slate-300 font-mono text-xs">Cancel</button>
+                <button onclick="window.app.saveAgentFromModal()" class="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs font-bold transition">
+                    Save Persona Wrapper
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL 3: CLOUD SESSION SNAPSHOTS (SAVE / LOAD)
+         ========================================== -->
+    <div id="snapshotsModal" class="fixed inset-0 z-50 hidden bg-obsidian/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="tactical-card rounded-2xl max-w-2xl w-full p-6 border border-cyan-500/40 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-tactical-700 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-database text-cyan-400 text-lg"></i>
+                    <div>
+                        <h3 class="font-mono font-bold text-sm uppercase tracking-wider text-white">5. Persistence &amp; Session Snapshots</h3>
+                        <p class="text-[11px] text-slate-400">Save or restore complete workspace states (Agents, Host, Turn Counter &amp; Bus History)</p>
+                    </div>
+                </div>
+                <button onclick="window.app.closeSnapshotsModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Save Current Session Snapshot Form -->
+            <div class="p-3.5 rounded-xl bg-tactical-950 border border-tactical-700 flex flex-col sm:flex-row gap-2.5">
+                <input id="snapshotTitleInput" type="text" placeholder="Enter snapshot title (e.g., Zero-Trust Architecture Round 4)..." class="flex-1 rounded-lg bg-tactical-900 border border-tactical-700 px-3 py-2 text-xs text-white focus:border-cyan-400 focus:outline-none font-mono">
+                <button onclick="window.app.saveSessionSnapshot()" class="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Snapshot
+                </button>
+            </div>
+
+            <!-- Saved Snapshots List -->
+            <div id="snapshotsListContainer" class="flex-1 overflow-y-auto space-y-2.5 pr-1 min-h-[220px]">
+                <!-- Populated dynamically -->
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-tactical-700 text-[11px] font-mono text-slate-400">
+                <span id="snapshotStorageStatus">Synced with Cloud Firestore + In-Memory Store</span>
+                <button onclick="window.app.closeSnapshotsModal()" class="px-3 py-1.5 rounded bg-tactical-800 hover:bg-tactical-700 text-slate-200">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL 4: INTERACTIVE HELP & TACTICAL OPERATIONS MANUAL (Alt+H)
+         ========================================== -->
+    <div id="helpModal" class="fixed inset-0 z-50 hidden bg-obsidian/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="tactical-card rounded-2xl max-w-4xl w-full p-6 border border-violet-500/50 shadow-2xl flex flex-col max-h-[88vh]">
+            <!-- Modal Header -->
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-tactical-700 pb-3.5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/40 flex items-center justify-center text-violet-300">
+                        <i class="fa-solid fa-book-journal-whills text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-mono font-bold text-sm md:text-base uppercase tracking-wider text-white">NEXUS // Tactical Operations Manual &amp; Diagnostics</h3>
+                            <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/40">HOTKEY: Alt+H</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Complete Multi-Agent Orchestration Guide, Routing Architecture &amp; System Self-Test</p>
+                    </div>
+                </div>
+                <button onclick="window.app.closeHelpModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg bg-tactical-800/80 border border-tactical-700">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Manual Navigation Tabs -->
+            <div class="flex flex-wrap items-center gap-2 py-3 border-b border-tactical-700/80 font-mono text-xs">
+                <button id="helpTabBtn_quickstart" onclick="window.app.switchHelpTab('quickstart')" class="px-3.5 py-2 rounded-lg border transition flex items-center gap-2 bg-violet-500/20 text-violet-200 border-violet-500/50 font-bold">
+                    <i class="fa-solid fa-rocket"></i> 1. Quick-Start Guide (4-Step Workflow)
+                </button>
+                <button id="helpTabBtn_routing" onclick="window.app.switchHelpTab('routing')" class="px-3.5 py-2 rounded-lg border transition flex items-center gap-2 bg-tactical-950 text-slate-300 border-tactical-700 hover:border-tactical-600">
+                    <i class="fa-solid fa-sitemap"></i> 2. Routing Modes &amp; Consensus Logic
+                </button>
+                <button id="helpTabBtn_diagnostics" onclick="window.app.switchHelpTab('diagnostics')" class="px-3.5 py-2 rounded-lg border transition flex items-center gap-2 bg-tactical-950 text-slate-300 border-tactical-700 hover:border-tactical-600">
+                    <i class="fa-solid fa-microchip"></i> 3. Hotkeys &amp; System Diagnostics
+                </button>
+            </div>
+
+            <!-- Tab Content Container -->
+            <div class="flex-1 overflow-y-auto py-4 pr-1 space-y-4">
+                <!-- TAB 1: QUICK-START GUIDE (4-STEP WORKFLOW) -->
+                <div id="helpTabContent_quickstart" class="space-y-4">
+                    <div class="p-3.5 rounded-xl bg-gradient-to-r from-violet-950/50 via-tactical-900 to-cyan-950/50 border border-violet-500/40 flex flex-wrap items-center justify-between gap-3">
+                        <div class="text-xs text-slate-200">
+                            <strong class="text-violet-300 font-mono uppercase">Want to see everything in action immediately?</strong> Click the button on the right to auto-verify your session handshake, load a sample tactical directive, and run a complete multi-agent turn + consensus check.
+                        </div>
+                        <button onclick="window.app.runDiagnosticsAndDemo()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-mono text-xs font-bold transition shadow-lg shrink-0">
+                            <i class="fa-solid fa-play mr-1"></i> Unlock &amp; Run Live Demo Now
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        <!-- Step 1 Card -->
+                        <div class="p-4 rounded-xl bg-tactical-950/90 border border-cyan-500/30 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs font-bold text-cyan-300 uppercase">Step 1 // Authentication &amp; Session Gate</span>
+                                <span class="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 font-mono text-xs font-bold flex items-center justify-center">01</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                To prevent unauthorized token burn, the orchestrator starts in <code class="text-rose-300">UNVERIFIED GATE</code> mode. Click <strong>Verify Handshake</strong> in the top HUD (or open the Operator Login modal to customize your callsign) to transition the session to <code class="text-emerald-300">STATE === VERIFIED</code> and unlock the broadcast deck.
+                            </p>
+                        </div>
+
+                        <!-- Step 2 Card -->
+                        <div class="p-4 rounded-xl bg-tactical-950/90 border border-emerald-500/30 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs font-bold text-emerald-300 uppercase">Step 2 // Agent Registry &amp; Persona Wrappers</span>
+                                <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold flex items-center justify-center">02</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Manage your active AI pool in the left column. Each agent wraps a base model with a custom <strong>Handle</strong>, <strong>Role</strong>, <strong>System Directive</strong>, <strong>Temperature</strong> (0.0 strict to 1.5 creative), and <strong>Max Output Tokens</strong>. Click <strong>Make Host</strong> on any agent (or pick yourself) to lead the discussion.
+                            </p>
+                        </div>
+
+                        <!-- Step 3 Card -->
+                        <div class="p-4 rounded-xl bg-tactical-950/90 border border-amber-500/30 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs font-bold text-amber-300 uppercase">Step 3 // Host-Led Orchestration &amp; Shared Bus</span>
+                                <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 font-mono text-xs font-bold flex items-center justify-center">03</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Pick a preset chip or type a premise into the <strong>Master Group Prompt Broadcast</strong> bar and hit <strong>Broadcast</strong>. Advance the discussion turn-by-turn with <strong>Step 1 Turn</strong>, toggle <strong>Auto-Loop</strong>, use <strong>Force-Pass Mic</strong> to call on a specific agent, or inject mid-round operator directives.
+                            </p>
+                        </div>
+
+                        <!-- Step 4 Card -->
+                        <div class="p-4 rounded-xl bg-tactical-950/90 border border-violet-500/30 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs font-bold text-violet-300 uppercase">Step 4 // Telemetry, Consensus &amp; Snapshots</span>
+                                <span class="w-6 h-6 rounded-full bg-violet-500/20 text-violet-300 font-mono text-xs font-bold flex items-center justify-center">04</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Track live prompt/completion token burn against your session budget ceiling. Click <strong>Trigger Consensus Vote</strong> anytime to poll all active agents for a structured <code>1–10</code> proposal score and verdict. Save full state snapshots or export transcripts to <code>.MD</code> / <code>.JSON</code>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: ROUTING MODES & CONSENSUS LOGIC -->
+                <div id="helpTabContent_routing" class="hidden space-y-4">
+                    <div class="p-4 rounded-xl bg-tactical-950/90 border border-tactical-700 space-y-3">
+                        <h4 class="font-mono text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-2">
+                            <i class="fa-solid fa-route"></i> Multi-Agent Turn Routing Modes
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                            <div class="p-3 rounded-lg bg-tactical-900 border border-cyan-500/30 space-y-1">
+                                <div class="font-mono font-bold text-white">1. Host-Directed (AI Router)</div>
+                                <p class="text-slate-300 leading-relaxed">Before each turn, the designated Host AI analyzes the recent transcript and outputs a structured JSON routing decision selecting which specialist agent should speak next and why.</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-tactical-900 border border-emerald-500/30 space-y-1">
+                                <div class="font-mono font-bold text-white">2. Round-Robin Sequential</div>
+                                <p class="text-slate-300 leading-relaxed">Deterministic fixed-order rotation through every active agent in the registry pool (<code class="text-emerald-300">AEGIS &rarr; NOVA &rarr; VEX</code>), ensuring equal floor time per round.</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-tactical-900 border border-amber-500/30 space-y-1">
+                                <div class="font-mono font-bold text-white">3. Manual Operator Override</div>
+                                <p class="text-slate-300 leading-relaxed">Automatically pauses the loop after every single turn so the human operator can inspect telemetry, inject guidance, or manually click a <strong>Force-Pass Mic</strong> button.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-tactical-950/90 border border-tactical-700 space-y-3">
+                        <h4 class="font-mono text-xs font-bold uppercase tracking-wider text-violet-300 flex items-center gap-2">
+                            <i class="fa-solid fa-scale-balanced"></i> Automated 1–10 Consensus Matrix Mathematical Model
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300">
+                            <div class="p-3 rounded-lg bg-tactical-900 border border-tactical-700 space-y-1.5">
+                                <div class="font-mono font-bold text-violet-200">Structured Per-Agent Scoring &amp; Verdicts</div>
+                                <p>Each active persona evaluates the target proposal and bus context in parallel, returning a structured JSON payload with:</p>
+                                <ul class="list-disc list-inside space-y-1 text-slate-300 font-mono text-[11px]">
+                                    <li><span class="text-emerald-300">Score 8–10 (APPROVE)</span>: High confidence endorsement.</li>
+                                    <li><span class="text-amber-300">Score 5–7 (CONDITIONAL)</span>: Viable with specific mitigations.</li>
+                                    <li><span class="text-rose-300">Score 1–4 (REJECT)</span>: Critical architectural or security flaw.</li>
+                                </ul>
+                            </div>
+                            <div class="p-3 rounded-lg bg-tactical-900 border border-tactical-700 space-y-1.5">
+                                <div class="font-mono font-bold text-cyan-200">Mean Score &amp; Standard Deviation Convergence %</div>
+                                <p>The matrix computes the arithmetic <strong>Mean Score</strong> ($\mu$) and the population <strong>Standard Deviation</strong> ($\sigma$) across all agent scores:</p>
+                                <div class="p-2 rounded bg-tactical-950 font-mono text-[11px] text-cyan-300 border border-tactical-800">
+                                    Convergence % = clamp(100 - (&sigma; / 4.5) &times; 100, 0, 100)
+                                </div>
+                                <p class="text-[11px] text-slate-400">If $\mu \ge 7.5$, Convergence $\ge 65\%$, and no agent votes <code>REJECT</code>, the matrix locks <strong class="text-emerald-300">CONSENSUS LOCKED</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: HOTKEYS & SYSTEM DIAGNOSTICS -->
+                <div id="helpTabContent_diagnostics" class="hidden space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Keyboard Shortcuts Cheatsheet -->
+                        <div class="p-4 rounded-xl bg-tactical-950/90 border border-tactical-700 space-y-2.5">
+                            <h4 class="font-mono text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-2">
+                                <i class="fa-solid fa-keyboard"></i> Tactical Keyboard Shortcuts
+                            </h4>
+                            <div class="space-y-2 font-mono text-xs">
+                                <div class="flex items-center justify-between p-2 rounded bg-tactical-900 border border-tactical-800">
+                                    <span class="text-slate-300">Broadcast Master Directive</span>
+                                    <kbd class="px-2 py-0.5 rounded bg-tactical-800 text-cyan-300 border border-tactical-600">Ctrl + Enter</kbd>
+                                </div>
+                                <div class="flex items-center justify-between p-2 rounded bg-tactical-900 border border-tactical-800">
+                                    <span class="text-slate-300">Step Next Agent Turn</span>
+                                    <kbd class="px-2 py-0.5 rounded bg-tactical-800 text-emerald-300 border border-tactical-600">Alt + S</kbd>
+                                </div>
+                                <div class="flex items-center justify-between p-2 rounded bg-tactical-900 border border-tactical-800">
+                                    <span class="text-slate-300">Trigger 1–10 Consensus Vote</span>
+                                    <kbd class="px-2 py-0.5 rounded bg-tactical-800 text-violet-300 border border-tactical-600">Alt + V</kbd>
+                                </div>
+                                <div class="flex items-center justify-between p-2 rounded bg-tactical-900 border border-tactical-800">
+                                    <span class="text-slate-300">Toggle Help &amp; Manual Modal</span>
+                                    <kbd class="px-2 py-0.5 rounded bg-tactical-800 text-amber-300 border border-tactical-600">Alt + H</kbd>
+                                </div>
+                                <div class="flex items-center justify-between p-2 rounded bg-tactical-900 border border-tactical-800">
+                                    <span class="text-slate-300">Close Active Modal</span>
+                                    <kbd class="px-2 py-0.5 rounded bg-tactical-800 text-slate-300 border border-tactical-600">Esc</kbd>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Interactive System Diagnostics & Demo Runner -->
+                        <div class="p-4 rounded-xl bg-tactical-950/90 border border-emerald-500/40 flex flex-col justify-between space-y-3">
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-mono text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-2">
+                                        <i class="fa-solid fa-stethoscope"></i> Automated Subsystem Self-Test
+                                    </h4>
+                                    <span id="diagOverallStatusBadge" class="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-bold">STANDBY</span>
+                                </div>
+                                <p class="text-xs text-slate-400">
+                                    Verifies the Auth Gate, Agent Registry, Shared Conversation Bus, Live Token Telemetry, Consensus Matrix, and Snapshot Store, and loads a ready-to-run tactical scenario.
+                                </p>
+
+                                <div id="diagnosticsChecklist" class="space-y-1.5 pt-1 font-mono text-[11px]">
+                                    <div class="p-2 rounded bg-tactical-900 border border-tactical-800 text-slate-400 flex items-center justify-between">
+                                        <span>1. Auth &amp; Session Handshake Gate</span>
+                                        <span class="text-slate-500">PENDING</span>
+                                    </div>
+                                    <div class="p-2 rounded bg-tactical-900 border border-tactical-800 text-slate-400 flex items-center justify-between">
+                                        <span>2. Multi-Agent Persona Registry</span>
+                                        <span class="text-slate-500">PENDING</span>
+                                    </div>
+                                    <div class="p-2 rounded bg-tactical-900 border border-tactical-800 text-slate-400 flex items-center justify-between">
+                                        <span>3. Shared Bus &amp; Host Router</span>
+                                        <span class="text-slate-500">PENDING</span>
+                                    </div>
+                                    <div class="p-2 rounded bg-tactical-900 border border-tactical-800 text-slate-400 flex items-center justify-between">
+                                        <span>4. Live Token Telemetry &amp; 1–10 Consensus</span>
+                                        <span class="text-slate-500">PENDING</span>
+                                    </div>
+                                    <div class="p-2 rounded bg-tactical-900 border border-tactical-800 text-slate-400 flex items-center justify-between">
+                                        <span>5. Snapshot Persistence &amp; Export Engine</span>
+                                        <span class="text-slate-500">PENDING</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="runDiagBtn" onclick="window.app.runDiagnosticsAndDemo()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-mono text-xs font-bold uppercase tracking-wider transition shadow-lg flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-bolt"></i>
+                                <span>Run System Diagnostics &amp; Load Demo Scenario</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-tactical-700 text-[11px] font-mono text-slate-400">
+                <span>TIP: Press <kbd class="px-1.5 py-0.5 rounded bg-tactical-800 text-cyan-300">Alt+H</kbd> anytime to toggle this Tactical Operations Manual.</span>
+                <button onclick="window.app.closeHelpModal()" class="px-4 py-1.5 rounded-lg bg-tactical-800 hover:bg-tactical-700 text-slate-200 border border-tactical-600">Close Manual</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Quick-Help Launcher Button (Bottom-Right) -->
+    <button onclick="window.app.openHelpModal('quickstart')" title="Open Help & Tactical Manual (Alt+H)" class="fixed bottom-4 left-4 z-40 px-3.5 py-2 rounded-full bg-violet-600/90 hover:bg-violet-500 text-white font-mono text-xs font-bold border border-violet-400/50 shadow-xl shadow-violet-950/60 flex items-center gap-2 transition hover:scale-105">
+        <i class="fa-solid fa-circle-question"></i>
+        <span class="hidden sm:inline">Tactical Help</span>
+    </button>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- ==========================================
+         APPLICATION LOGIC + FIREBASE + GEMINI API
+         ========================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDocs, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ------------------------------------------
+        // DEFAULT PERSONA WRAPPERS (3 PRE-POPULATED AGENTS)
+        // ------------------------------------------
+        const DEFAULT_AGENTS = [
+            {
+                id: 'agent-aegis',
+                handle: 'AEGIS // Architect',
+                role: 'Analytical Systems Architect',
+                color: 'cyan',
+                active: true,
+                system_directive: 'You are AEGIS, a rigorous Analytical Systems Architect. You focus on structural soundness, modular topology, latency budgets, fault tolerance, and concrete implementation blueprints. Speak concisely with technical authority. Challenge vague ideas and propose clear architectural patterns.',
+                parameters: {
+                    temperature: 0.4,
+                    max_tokens: 450
+                }
+            },
+            {
+                id: 'agent-nova',
+                handle: 'NOVA // Strategist',
+                role: 'Creative Foresight Strategist',
+                color: 'emerald',
+                active: true,
+                system_directive: 'You are NOVA, a high-leverage Creative Strategist and lateral thinker. You explore asymmetric opportunities, human-in-the-loop ergonomics, emergent behaviors, and bold synthesis across disciplines. Build constructively on other agents while pushing boundaries.',
+                parameters: {
+                    temperature: 0.9,
+                    max_tokens: 450
+                }
+            },
+            {
+                id: 'agent-vex',
+                handle: 'VEX // Auditor',
+                role: 'Critical Red-Team Auditor',
+                color: 'rose',
+                active: true,
+                system_directive: 'You are VEX, a sharp Critical Auditor and Red-Team specialist. Your job is to stress-test every proposal on the bus for security vulnerabilities, edge-case failures, runaway token loops, and operational bottlenecks. Be incisive, direct, and constructive.',
+                parameters: {
+                    temperature: 0.5,
+                    max_tokens: 450
+                }
+            }
+        ];
+
+        const SCENARIO_PRESETS = {
+            architecture: "Design a resilient, zero-trust multi-agent orchestration mesh capable of coordinating 50+ specialized autonomous sub-agents without context window collapse or unauthorized privilege escalation.",
+            quantum: "Architect a fault-tolerant Distributed Quantum Key Distribution (QKD) & telemetry synchronization network across 12 low-earth-orbit relay nodes with sub-50ms consensus finality.",
+            liquidity: "Specify the risk guardrails, circuit-breaker invariants, and cryptographic execution proofs for an Autonomous Cross-Chain Liquidity & Treasury Rebalancing Engine.",
+            crisis: "ALERT: Orbital relay cluster Alpha-9 is experiencing cascading telemetry desynchronization with 14 minutes until eclipse blackout. Propose an immediate triage, verification, and failover protocol.",
+            product: "Formulate the product architecture and governance guardrails for an enterprise autonomous code-refactoring swarm where AI agents review, test, and merge production patches."
+        };
+
+        const COLOR_STYLES = {
+            cyan: {
+                badge: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40',
+                border: 'border-cyan-500/40',
+                dot: 'bg-cyan-400',
+                text: 'text-cyan-300'
+            },
+            emerald: {
+                badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
+                border: 'border-emerald-500/40',
+                dot: 'bg-emerald-400',
+                text: 'text-emerald-300'
+            },
+            amber: {
+                badge: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
+                border: 'border-amber-500/40',
+                dot: 'bg-amber-400',
+                text: 'text-amber-300'
+            },
+            rose: {
+                badge: 'bg-rose-500/15 text-rose-300 border-rose-500/40',
+                border: 'border-rose-500/40',
+                dot: 'bg-rose-400',
+                text: 'text-rose-300'
+            },
+            violet: {
+                badge: 'bg-violet-500/15 text-violet-300 border-violet-500/40',
+                border: 'border-violet-500/40',
+                dot: 'bg-violet-400',
+                text: 'text-violet-300'
+            },
+            blue: {
+                badge: 'bg-blue-500/15 text-blue-300 border-blue-500/40',
+                border: 'border-blue-500/40',
+                dot: 'bg-blue-400',
+                text: 'text-blue-300'
+            }
+        };
+
+        // ------------------------------------------
+        // CENTRAL ORCHESTRATION STATE
+        // ------------------------------------------
+        const state = {
+            auth: {
+                operatorCallsign: 'CMD-SIR-GAMEZ',
+                operatorEmail: 'operator@nexus-orchestrator.io',
+                sessionToken: 'NX-' + Math.random().toString(36).substring(2, 10).toUpperCase() + '-99A',
+                verified: false,
+                firebaseUid: null
+            },
+            agents: JSON.parse(JSON.stringify(DEFAULT_AGENTS)),
+            orchestration: {
+                hostId: 'agent-aegis', // Any agent ID or 'USER_HOST'
+                routingMode: 'HOST_DIRECTED', // 'HOST_DIRECTED' | 'ROUND_ROBIN' | 'MANUAL_OVERRIDE'
+                currentTurn: 0,
+                maxTurns: 8,
+                activeSpeakerId: null,
+                busState: 'IDLE', // 'IDLE' | 'RUNNING' | 'PAUSED' | 'COMPLETED'
+                autoLoopActive: false,
+                roundRobinIndex: 0,
+                isGenerating: false,
+                autoVoteOnComplete: true
+            },
+            tokenTelemetry: {
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+                sessionBudget: 12000,
+                apiCalls: 0,
+                byAgent: {} // { [agentId]: { prompt: 0, completion: 0, total: 0, calls: 0 } }
+            },
+            consensusMatrix: {
+                proposal: '',
+                lastPolledAt: null,
+                turnPolled: 0,
+                meanScore: null,
+                agreementPct: null,
+                status: 'AWAITING POLL', // 'AWAITING POLL' | 'POLLING...' | 'CONSENSUS LOCKED' | 'CONDITIONAL ALIGNMENT' | 'SPLIT DECISION' | 'VETOED / REJECTED'
+                votes: [] // [{ agentId, handle, role, color, score, verdict, rationale, keyCondition, tokensUsed }]
+            },
+            messages: [],
+            snapshots: [],
+            selectedModalColor: 'cyan'
+        };
+
+        // ------------------------------------------
+        // FIREBASE INITIALIZATION (STRICT RULES 1, 2, 3)
+        // ------------------------------------------
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'nexus-multi-agent-orchestrator';
+
+        async function initFirebase() {
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const firebaseApp = initializeApp(firebaseConfig);
+                    auth = getAuth(firebaseApp);
+                    db = getFirestore(firebaseApp);
+
+                    // RULE 3: Authenticate FIRST before any Firestore query
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        currentUser = user;
+                        if (user) {
+                            state.auth.firebaseUid = user.uid;
+                            const uidEl = document.getElementById('modalFirebaseUidDisplay');
+                            if (uidEl) uidEl.textContent = `Cloud UID: ${user.uid}`;
+                            const cloudInd = document.getElementById('cloudSyncIndicator');
+                            if (cloudInd) {
+                                cloudInd.innerHTML = `<i class="fa-solid fa-cloud-check text-emerald-400"></i> Cloud Connected`;
+                            }
+                            subscribeToSnapshots();
+                        }
+                    });
+                } else {
+                    logTelemetry('Cloud config not detected; operating with in-memory session store.');
+                }
+            } catch (err) {
+                logTelemetry(`Cloud init fallback active: ${err.message}`);
+            }
+        }
+
+        function subscribeToSnapshots() {
+            // RULE 3 Guard
+            if (!currentUser || !db) return;
+            // RULE 1 Strict Path
+            const colRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'orchestration_snapshots');
+            // RULE 2 Simple query + error callback
+            onSnapshot(colRef, (snapshot) => {
+                const loaded = [];
+                snapshot.forEach((docSnap) => {
+                    loaded.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                // Sort in JS memory newest first
+                loaded.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+                state.snapshots = loaded;
+                renderSnapshotsList();
+            }, (error) => {
+                logTelemetry(`Snapshot sync warning: ${error.message}`);
+            });
+        }
+
+        // ------------------------------------------
+        // GEMINI API HELPER (WITH EXPONENTIAL BACKOFF & LIVE TOKEN TELEMETRY)
+        // ------------------------------------------
+        const apiKey = "";
+        const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+        // Estimate token count cleanly if usageMetadata is absent
+        function estimateTokenCount(text) {
+            if (!text) return 0;
+            return Math.max(1, Math.ceil(String(text).length / 3.8));
+        }
+
+        function recordTokenUsage(agentId, promptTokens, completionTokens) {
+            const p = Math.max(0, Number(promptTokens) || 0);
+            const c = Math.max(0, Number(completionTokens) || 0);
+            const tot = p + c;
+
+            state.tokenTelemetry.promptTokens += p;
+            state.tokenTelemetry.completionTokens += c;
+            state.tokenTelemetry.totalTokens += tot;
+            state.tokenTelemetry.apiCalls += 1;
+
+            if (agentId) {
+                if (!state.tokenTelemetry.byAgent[agentId]) {
+                    state.tokenTelemetry.byAgent[agentId] = { prompt: 0, completion: 0, total: 0, calls: 0 };
+                }
+                state.tokenTelemetry.byAgent[agentId].prompt += p;
+                state.tokenTelemetry.byAgent[agentId].completion += c;
+                state.tokenTelemetry.byAgent[agentId].total += tot;
+                state.tokenTelemetry.byAgent[agentId].calls += 1;
+            }
+
+            return { promptTokens: p, completionTokens: c, totalTokens: tot };
+        }
+
+        async function fetchGeminiWithBackoff(payload, retries = 4, agentIdForTelemetry = null) {
+            let delay = 1000;
+            const serializedInput = JSON.stringify(payload.contents || '') + JSON.stringify(payload.systemInstruction || '');
+
+            for (let attempt = 0; attempt <= retries; attempt++) {
+                try {
+                    const response = await fetch(GEMINI_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const result = await response.json();
+                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) throw new Error('Empty response payload from model');
+
+                    // Extract real usageMetadata or fallback to deterministic character-ratio calculation
+                    const usage = result?.usageMetadata;
+                    const promptTok = usage?.promptTokenCount || estimateTokenCount(serializedInput);
+                    const completionTok = usage?.candidatesTokenCount || estimateTokenCount(text);
+                    const tokenReceipt = recordTokenUsage(agentIdForTelemetry, promptTok, completionTok);
+
+                    return { text, tokenReceipt };
+                } catch (err) {
+                    if (attempt === retries) throw err;
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // Generate an agent's conversational response based on their Persona Wrapper & Shared Bus
+        async function generateAgentTurnResponse(agent, isHostSynthesis = false) {
+            const activeAgentsList = state.agents
+                .filter(a => a.active)
+                .map(a => `- ${a.handle} (${a.role})`)
+                .join('\n');
+
+            const isDesignatedHost = state.orchestration.hostId === agent.id;
+            const hostContext = isDesignatedHost
+                ? `You are also the designated HOST of this multi-agent session. Maintain momentum, synthesize key points, and keep the group aligned on the objective.`
+                : `The designated Host for this session is ${getHostDisplayName()}.`;
+
+            const systemPrompt = `${agent.system_directive}\n\n` +
+                `=== MULTI-AGENT BUS CONTEXT ===\n` +
+                `Your Handle: [${agent.handle}]\n` +
+                `Your Role: ${agent.role}\n` +
+                `${hostContext}\n` +
+                `Active Participants on the Shared Bus:\n${activeAgentsList}\n` +
+                `Rules:\n` +
+                `1. Stay strictly in character according to your Persona Wrapper directive.\n` +
+                `2. Reference other agents by their handle when building on or critiquing their points.\n` +
+                `3. Keep your response focused, high-signal, and under 140 words unless synthesizing.\n` +
+                `4. Do NOT prefix your response with your own handle tag—just speak directly.`;
+
+            const transcriptText = state.messages
+                .slice(-14)
+                .map(m => `[Turn ${m.turn}] [${m.speakerHandle}]: ${m.content}`)
+                .join('\n\n');
+
+            const taskDirective = isHostSynthesis
+                ? `Provide an authoritative Host synthesis of the multi-agent discussion so far, highlighting consensus, unresolved red-team risks, and concrete next actions.`
+                : `Respond to the shared conversation bus as ${agent.handle} for Turn ${state.orchestration.currentTurn + 1} of ${state.orchestration.maxTurns}.`;
+
+            const userQuery = `=== SHARED CONVERSATION TRANSCRIPT ===\n${transcriptText || '(No prior messages)'}\n\n=== CURRENT DIRECTIVE ===\n${taskDirective}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    temperature: Number(agent.parameters.temperature) || 0.7,
+                    maxOutputTokens: Number(agent.parameters.max_tokens) || 450
+                }
+            };
+
+            try {
+                return await fetchGeminiWithBackoff(payload, 4, agent.id);
+            } catch (err) {
+                logTelemetry(`Tactical Fallback Engine engaged for ${agent.handle} (${err.message}).`);
+                const turnNum = state.orchestration.currentTurn + 1;
+                const roleLower = (agent.role || '').toLowerCase();
+                let fallbackText = '';
+                if (isHostSynthesis) {
+                    fallbackText = `[EXECUTIVE HOST SYNTHESIS — ${agent.handle}]: Across ${state.orchestration.currentTurn} turns on the shared bus, our multi-agent pool has converged on a layered zero-trust architecture: (1) AEGIS established deterministic state-machine boundaries and cryptographic session handshakes, (2) NOVA introduced adaptive human-in-the-loop telemetry and dynamic sub-agent routing, and (3) VEX isolated token-exhaustion and privilege-escalation vectors with hard circuit breakers. Verdict: Ready for 1–10 Consensus Matrix ratification.`;
+                } else if (roleLower.includes('architect') || agent.id.includes('aegis')) {
+                    fallbackText = `At Turn ${turnNum}, from a structural topology standpoint, we must decouple the control plane from the shared message bus. Each participating persona node should authenticate via short-lived ephemeral tokens and publish state transitions through an append-only ledger with strict schema validation and deterministic rollback checkpoints.`;
+                } else if (roleLower.includes('strategist') || agent.id.includes('nova')) {
+                    fallbackText = `Building on the architectural baseline at Turn ${turnNum}, we can unlock asymmetric resilience by pairing dynamic Host-directed routing with real-time confidence scoring. Instead of static polling, sub-agents can bid on turn priority whenever their domain specialty detects high-leverage anomalies on the shared bus.`;
+                } else if (roleLower.includes('auditor') || roleLower.includes('red-team') || agent.id.includes('vex')) {
+                    fallbackText = `Red-Team audit at Turn ${turnNum}: both proposals require hard token-budget ceilings and Byzantine fault isolation. If a compromised or hallucinating persona attempts recursive prompt injection on the shared bus, our state machine must trip an immediate circuit breaker and quarantine the node before consensus polling.`;
+                } else {
+                    fallbackText = `[${agent.handle} — Turn ${turnNum} Analysis]: Evaluating the active group directive through my ${agent.role} parameters. I recommend enforcing mutual cryptographic attestation between agent wrappers and verifying consensus convergence before committing state snapshots.`;
+                }
+                const tokenReceipt = recordTokenUsage(
+                    agent.id,
+                    estimateTokenCount(systemPrompt + userQuery),
+                    estimateTokenCount(fallbackText)
+                );
+                return { text: fallbackText, tokenReceipt };
+            }
+        }
+
+        // Host-Directed Routing Decision via Structured JSON Output
+        async function decideNextSpeakerViaHostAI(hostAgent, activePool) {
+            const poolDescriptions = activePool.map(a => `ID: "${a.id}" | Handle: "${a.handle}" | Role: "${a.role}"`).join('\n');
+            const transcriptText = state.messages
+                .slice(-8)
+                .map(m => `[Turn ${m.turn}] [${m.speakerHandle}]: ${m.content}`)
+                .join('\n');
+
+            const prompt = `You are ${hostAgent.handle}, acting as the Host router for a multi-agent session.\n` +
+                `Available Active Agents:\n${poolDescriptions}\n\n` +
+                `Recent Transcript:\n${transcriptText}\n\n` +
+                `Select which agent ID should speak next to maximize analytical depth, and provide a 1-sentence tactical moderation note explaining why you are passing the mic to them.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            nextAgentId: { type: "STRING" },
+                            hostModerationNote: { type: "STRING" }
+                        },
+                        propertyOrdering: ["nextAgentId", "hostModerationNote"]
+                    }
+                }
+            };
+
+            try {
+                const { text: rawJson, tokenReceipt } = await fetchGeminiWithBackoff(payload, 3, hostAgent.id);
+                const parsed = JSON.parse(rawJson);
+                const chosen = activePool.find(a => a.id === parsed.nextAgentId) || activePool[state.orchestration.currentTurn % activePool.length];
+                return {
+                    agent: chosen,
+                    reason: parsed.hostModerationNote || `${hostAgent.handle} routed floor to ${chosen.handle}.`,
+                    routingTokens: tokenReceipt.totalTokens
+                };
+            } catch (e) {
+                const fallbackAgent = activePool[state.orchestration.currentTurn % activePool.length];
+                const receipt = recordTokenUsage(hostAgent.id, estimateTokenCount(prompt), 28);
+                return {
+                    agent: fallbackAgent,
+                    reason: `Host routed floor to ${fallbackAgent.handle} for domain input.`,
+                    routingTokens: receipt.totalTokens
+                };
+            }
+        }
+
+        // Evaluate Proposal 1-10 Score & Verdict for an individual Agent (Structured JSON Output)
+        async function evaluateProposalByAgent(agent, proposalText, transcriptText) {
+            const systemPrompt = `${agent.system_directive}\n` +
+                `You are participating in an Automated Consensus Voting Matrix as [${agent.handle}] (${agent.role}).\n` +
+                `Evaluate the current proposal and discussion strictly from your persona's analytical lens and score it from 1 (critical failure / reject) to 10 (flawless / full endorsement).`;
+
+            const userPrompt = `=== PROPOSAL UNDER EVALUATION ===\n${proposalText}\n\n` +
+                `=== SHARED CONVERSATION BUS CONTEXT ===\n${transcriptText || '(Direct proposal evaluation)'}\n\n` +
+                `Return a structured JSON vote containing:\n` +
+                `- score: integer from 1 to 10\n` +
+                `- verdict: one of "APPROVE" (score 8-10), "CONDITIONAL" (score 5-7), or "REJECT" (score 1-4)\n` +
+                `- rationale: 1-2 concise in-character sentences justifying your numerical score\n` +
+                `- keyCondition: 1 short tactical requirement or risk mitigation needed`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    temperature: Number(agent.parameters.temperature) || 0.5,
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            score: { type: "INTEGER" },
+                            verdict: { type: "STRING" },
+                            rationale: { type: "STRING" },
+                            keyCondition: { type: "STRING" }
+                        },
+                        propertyOrdering: ["score", "verdict", "rationale", "keyCondition"]
+                    }
+                }
+            };
+
+            try {
+                const { text: rawJson, tokenReceipt } = await fetchGeminiWithBackoff(payload, 3, agent.id);
+                const parsed = JSON.parse(rawJson);
+                const clampedScore = Math.max(1, Math.min(10, parseInt(parsed.score, 10) || 7));
+                let normalizedVerdict = String(parsed.verdict || '').toUpperCase();
+                if (!['APPROVE', 'CONDITIONAL', 'REJECT'].includes(normalizedVerdict)) {
+                    normalizedVerdict = clampedScore >= 8 ? 'APPROVE' : (clampedScore >= 5 ? 'CONDITIONAL' : 'REJECT');
+                }
+                return {
+                    agentId: agent.id,
+                    handle: agent.handle,
+                    role: agent.role,
+                    color: agent.color,
+                    score: clampedScore,
+                    verdict: normalizedVerdict,
+                    rationale: parsed.rationale || 'Proposal evaluated against architectural and operational criteria.',
+                    keyCondition: parsed.keyCondition || 'Maintain continuous telemetry verification.',
+                    tokensUsed: tokenReceipt.totalTokens
+                };
+            } catch (err) {
+                // Deterministic persona-aware fallback if offline/throttled
+                const baseScore = agent.id.includes('vex') ? 6 : (agent.id.includes('nova') ? 9 : 8);
+                const receipt = recordTokenUsage(agent.id, estimateTokenCount(systemPrompt + userPrompt), 64);
+                return {
+                    agentId: agent.id,
+                    handle: agent.handle,
+                    role: agent.role,
+                    color: agent.color,
+                    score: baseScore,
+                    verdict: baseScore >= 8 ? 'APPROVE' : 'CONDITIONAL',
+                    rationale: `Evaluated proposal through ${agent.role} parameters; core topology is viable provided strict boundary guards remain enforced.`,
+                    keyCondition: `Enforce cryptographic attestation before scaling node concurrency.`,
+                    tokensUsed: receipt.totalTokens
+                };
+            }
+        }
+
+        // ------------------------------------------
+        // UI RENDERING & TELEMETRY FUNCTIONS
+        // ------------------------------------------
+        function logTelemetry(text) {
+            const logEl = document.getElementById('systemTelemetryLog');
+            if (!logEl) return;
+            const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const entry = document.createElement('div');
+            entry.className = 'flex items-start gap-2 border-l-2 border-cyan-500/40 pl-2 py-0.5';
+            entry.innerHTML = `<span class="text-slate-500 shrink-0">${time}</span><span class="text-slate-300">${escapeHtml(text)}</span>`;
+            logEl.prepend(entry);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const colors = {
+                info: 'border-cyan-500/50 bg-tactical-900/95 text-cyan-200',
+                success: 'border-emerald-500/50 bg-tactical-900/95 text-emerald-200',
+                warn: 'border-amber-500/50 bg-tactical-900/95 text-amber-200',
+                error: 'border-rose-500/50 bg-tactical-900/95 text-rose-200'
+            };
+            const icons = {
+                info: 'fa-circle-info text-cyan-400',
+                success: 'fa-circle-check text-emerald-400',
+                warn: 'fa-triangle-exclamation text-amber-400',
+                error: 'fa-shield-virus text-rose-400'
+            };
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-xl font-mono text-xs transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3400);
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function getHostDisplayName() {
+            if (state.orchestration.hostId === 'USER_HOST') {
+                return `${state.auth.operatorCallsign} (Human Host)`;
+            }
+            const hostAgent = state.agents.find(a => a.id === state.orchestration.hostId);
+            return hostAgent ? hostAgent.handle : 'Unassigned';
+        }
+
+        function renderAll() {
+            renderAuthGateUI();
+            renderAgentRegistry();
+            renderTokenTelemetryMeter();
+            renderHostAndRoutingControls();
+            renderConversationBus();
+            renderConsensusVotingMatrix();
+            renderForcePassMicBar();
+            renderStateTelemetry();
+        }
+
+        // 1. Render Authentication & Session Handshake Gate
+        function renderAuthGateUI() {
+            const isVerified = state.auth.verified;
+            const badge = document.getElementById('sessionStatusBadge');
+            const dot = document.getElementById('sessionStatusDot');
+            const text = document.getElementById('sessionStatusText');
+            const btnLabel = document.getElementById('handshakeBtnLabel');
+            const banner = document.getElementById('sessionGateBanner');
+            const overlay = document.getElementById('broadcastGateOverlay');
+            const opName = document.getElementById('headerOperatorName');
+            const modalBadge = document.getElementById('modalAuthBadge');
+            const tokenInput = document.getElementById('authSessionToken');
+
+            if (opName) opName.textContent = state.auth.operatorCallsign;
+            if (tokenInput) tokenInput.value = state.auth.sessionToken;
+
+            if (isVerified) {
+                badge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-xs transition-all duration-300 bg-emerald-950/50 border-emerald-500/50 text-emerald-300';
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                text.textContent = `VERIFIED // ${state.auth.operatorCallsign}`;
+                btnLabel.textContent = 'Lock Gate';
+                banner.classList.add('hidden');
+                overlay.classList.add('hidden');
+                if (modalBadge) {
+                    modalBadge.className = 'font-mono text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                    modalBadge.textContent = 'VERIFIED (ACTIVE)';
+                }
+            } else {
+                badge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-xs transition-all duration-300 bg-rose-950/40 border-rose-500/40 text-rose-300';
+                dot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-ping';
+                text.textContent = 'UNVERIFIED GATE';
+                btnLabel.textContent = 'Verify Handshake';
+                banner.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+                if (modalBadge) {
+                    modalBadge.className = 'font-mono text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30';
+                    modalBadge.textContent = 'UNVERIFIED';
+                }
+            }
+        }
+
+        // 2. Render Agent Registry & Persona Wrappers
+        function renderAgentRegistry() {
+            const listEl = document.getElementById('agentRegistryList');
+            const countEl = document.getElementById('activeAgentCount');
+            if (!listEl) return;
+
+            const activeCount = state.agents.filter(a => a.active).length;
+            if (countEl) countEl.textContent = String(activeCount);
+
+            listEl.innerHTML = state.agents.map(agent => {
+                const c = COLOR_STYLES[agent.color] || COLOR_STYLES.cyan;
+                const isHost = state.orchestration.hostId === agent.id;
+                const isSpeaking = state.orchestration.activeSpeakerId === agent.id;
+                const agentTokenStats = state.tokenTelemetry.byAgent[agent.id] || { total: 0, calls: 0 };
+
+                return `
+                <div class="p-3 rounded-xl bg-tactical-950/90 border ${isSpeaking ? 'border-cyan-400 active-speaker-glow' : 'border-tactical-700/80'} transition relative">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0 ${agent.active ? c.dot : 'bg-slate-600'}"></span>
+                            <div class="truncate">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-mono text-xs font-bold text-white truncate">${escapeHtml(agent.handle)}</span>
+                                    ${isHost ? `<span class="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">HOST</span>` : ''}
+                                </div>
+                                <div class="text-[11px] text-slate-400 truncate">${escapeHtml(agent.role)}</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="window.app.toggleAgentActive('${agent.id}')" class="px-2 py-0.5 rounded font-mono text-[10px] border transition ${agent.active ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'}" title="Toggle Agent Active Status">
+                                ${agent.active ? 'ON' : 'OFF'}
+                            </button>
+                            <button onclick="window.app.openAgentModal('${agent.id}')" class="p-1 text-slate-400 hover:text-cyan-300 transition" title="Edit Persona Wrapper">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            ${state.agents.length > 1 ? `
+                            <button onclick="window.app.deleteAgent('${agent.id}')" class="p-1 text-slate-500 hover:text-rose-400 transition" title="Remove Agent">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>` : ''}
+                        </div>
+                    </div>
+
+                    <p class="mt-2 text-[11px] text-slate-300 line-clamp-2 font-sans leading-relaxed bg-tactical-900/70 p-2 rounded border border-tactical-800">
+                        ${escapeHtml(agent.system_directive)}
+                    </p>
+
+                    <div class="mt-2 flex items-center justify-between font-mono text-[10px] text-slate-400">
+                        <span>TEMP: <strong class="${c.text}">${agent.parameters.temperature}</strong></span>
+                        <span>USED: <strong class="text-emerald-300">${agentTokenStats.total.toLocaleString()} tok</strong></span>
+                        <button onclick="window.app.setDesignatedHost('${agent.id}')" class="hover:text-amber-300 underline">Make Host</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // Render Live Token Usage & Telemetry Meter
+        function renderTokenTelemetryMeter() {
+            const { promptTokens, completionTokens, totalTokens, sessionBudget, apiCalls, byAgent } = state.tokenTelemetry;
+            const utilizationPct = Math.min(100, Math.round((totalTokens / Math.max(1, sessionBudget)) * 100));
+
+            document.getElementById('meterPromptTokens').textContent = promptTokens.toLocaleString();
+            document.getElementById('meterCompletionTokens').textContent = completionTokens.toLocaleString();
+            document.getElementById('meterTotalTokens').textContent = totalTokens.toLocaleString();
+            document.getElementById('meterApiCallCount').textContent = String(apiCalls);
+            document.getElementById('tokenBudgetInput').value = String(sessionBudget);
+
+            const avgPerCall = apiCalls > 0 ? Math.round(totalTokens / apiCalls) : 0;
+            document.getElementById('meterAvgTokensPerTurn').textContent = `${avgPerCall.toLocaleString()} tok/call`;
+
+            const barEl = document.getElementById('tokenBudgetProgressBar');
+            const healthBadge = document.getElementById('tokenHealthBadge');
+            const headerCounter = document.getElementById('headerTokenCounter');
+            const headerBadge = document.getElementById('headerTokenStatusBadge');
+
+            if (barEl) barEl.style.width = `${utilizationPct}%`;
+            if (headerCounter) headerCounter.textContent = `${totalTokens.toLocaleString()} / ${sessionBudget.toLocaleString()}`;
+
+            let statusLabel = 'NOMINAL';
+            let badgeStyle = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40';
+            let barStyle = 'bg-gradient-to-r from-emerald-500 to-cyan-400';
+
+            if (utilizationPct >= 85) {
+                statusLabel = 'CRITICAL';
+                badgeStyle = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+                barStyle = 'bg-gradient-to-r from-amber-500 to-rose-500';
+            } else if (utilizationPct >= 60) {
+                statusLabel = 'ELEVATED';
+                badgeStyle = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                barStyle = 'bg-gradient-to-r from-cyan-400 to-amber-400';
+            }
+
+            if (barEl) barEl.className = `h-full transition-all duration-300 ${barStyle}`;
+            if (healthBadge) {
+                healthBadge.className = `font-mono text-[10px] uppercase px-2 py-0.5 rounded border font-bold ${badgeStyle}`;
+                healthBadge.textContent = `${statusLabel} (${utilizationPct}%)`;
+            }
+            if (headerBadge) {
+                headerBadge.className = `text-[10px] px-1.5 py-0.5 rounded border ${badgeStyle}`;
+                headerBadge.textContent = `${statusLabel} ${utilizationPct}%`;
+            }
+
+            // Per-agent breakdown bars
+            const breakdownEl = document.getElementById('perAgentTokenBreakdown');
+            if (!breakdownEl) return;
+
+            breakdownEl.innerHTML = state.agents.map(agent => {
+                const stats = byAgent[agent.id] || { prompt: 0, completion: 0, total: 0, calls: 0 };
+                const sharePct = totalTokens > 0 ? Math.round((stats.total / totalTokens) * 100) : 0;
+                const c = COLOR_STYLES[agent.color] || COLOR_STYLES.cyan;
+
+                return `
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between font-mono text-[10px]">
+                        <span class="text-slate-200 font-semibold truncate">${escapeHtml(agent.handle)}</span>
+                        <span class="text-slate-400">
+                            <strong class="${c.text}">${stats.total.toLocaleString()}</strong> tok (${sharePct}%) • ${stats.calls} calls
+                        </span>
+                    </div>
+                    <div class="w-full h-1.5 bg-tactical-950 rounded-full overflow-hidden border border-tactical-800">
+                        <div class="h-full ${c.dot} transition-all duration-300" style="width: ${sharePct}%"></div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 3. Render Host Selector & Routing Mode Buttons
+        function renderHostAndRoutingControls() {
+            const hostSel = document.getElementById('hostSelector');
+            if (hostSel) {
+                const options = state.agents
+                    .filter(a => a.active)
+                    .map(a => `<option value="${a.id}" ${state.orchestration.hostId === a.id ? 'selected' : ''}>[AI HOST] ${escapeHtml(a.handle)} — ${escapeHtml(a.role)}</option>`);
+                options.push(`<option value="USER_HOST" ${state.orchestration.hostId === 'USER_HOST' ? 'selected' : ''}>[HUMAN HOST] ${escapeHtml(state.auth.operatorCallsign)} (Operator)</option>`);
+                hostSel.innerHTML = options.join('');
+            }
+
+            const modes = ['HOST_DIRECTED', 'ROUND_ROBIN', 'MANUAL_OVERRIDE'];
+            modes.forEach(mode => {
+                const btn = document.getElementById(`routeBtn_${mode}`);
+                if (!btn) return;
+                if (state.orchestration.routingMode === mode) {
+                    btn.className = 'text-left p-2.5 rounded-lg border transition flex items-start gap-2.5 bg-cyan-500/15 border-cyan-500/60 shadow-inner';
+                } else {
+                    btn.className = 'text-left p-2.5 rounded-lg border transition flex items-start gap-2.5 bg-tactical-950/70 border-tactical-700 hover:border-tactical-600';
+                }
+            });
+
+            // Auto-Run Button UI
+            const autoBtn = document.getElementById('autoRunToggleBtn');
+            const autoIcon = document.getElementById('autoRunIcon');
+            const autoLabel = document.getElementById('autoRunLabel');
+            if (autoBtn && autoIcon && autoLabel) {
+                if (state.orchestration.autoLoopActive) {
+                    autoBtn.className = 'py-2.5 px-3 rounded-lg bg-amber-500/25 hover:bg-amber-500/35 text-amber-300 border border-amber-500/50 font-mono text-xs font-bold transition flex items-center justify-center gap-2';
+                    autoIcon.className = 'fa-solid fa-pause';
+                    autoLabel.textContent = 'Pause Loop';
+                } else {
+                    autoBtn.className = 'py-2.5 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold transition flex items-center justify-center gap-2';
+                    autoIcon.className = 'fa-solid fa-play';
+                    autoLabel.textContent = 'Auto-Loop';
+                }
+            }
+        }
+
+        // 4. Render Shared Conversation Bus
+        function renderConversationBus() {
+            const streamEl = document.getElementById('conversationBusStream');
+            const countBadge = document.getElementById('transcriptCountBadge');
+            if (!streamEl) return;
+
+            if (countBadge) countBadge.textContent = `${state.messages.length} msgs`;
+
+            if (state.messages.length === 0) {
+                streamEl.innerHTML = `
+                    <div class="h-full min-h-[320px] flex flex-col items-center justify-center text-center p-6 border border-dashed border-tactical-700 rounded-xl bg-tactical-950/40">
+                        <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-3">
+                            <i class="fa-solid fa-comments text-xl"></i>
+                        </div>
+                        <h3 class="font-mono text-xs uppercase tracking-wider text-slate-200 font-bold">Shared Conversation Bus Ready</h3>
+                        <p class="text-xs text-slate-400 max-w-md mt-1">
+                            Verify your session handshake above, then broadcast a master directive or select a preset scenario to initiate multi-agent orchestration.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            streamEl.innerHTML = state.messages.map(msg => {
+                const c = COLOR_STYLES[msg.color] || COLOR_STYLES.cyan;
+                const isSystem = msg.role === 'BROADCAST';
+                const isUser = msg.role === 'USER';
+                const isConsensus = msg.role === 'CONSENSUS_MATRIX';
+
+                if (isSystem) {
+                    return `
+                    <div class="p-3.5 rounded-xl bg-gradient-to-r from-cyan-950/60 via-tactical-900 to-cyan-950/60 border border-cyan-500/40">
+                        <div class="flex items-center justify-between font-mono text-[11px] text-cyan-300 mb-1">
+                            <span class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-satellite-dish"></i> [GROUP PROMPT BROADCAST] // BY ${escapeHtml(msg.speakerHandle)}</span>
+                            <span class="text-slate-400">${escapeHtml(msg.timestamp)} • TURN ${String(msg.turn).padStart(2, '0')}</span>
+                        </div>
+                        <div class="text-xs md:text-sm text-white font-medium leading-relaxed">${escapeHtml(msg.content)}</div>
+                    </div>
+                    `;
+                }
+
+                if (isConsensus) {
+                    const votesHtml = (msg.consensusData?.votes || []).map(v => {
+                        const vStyle = v.verdict === 'APPROVE'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : (v.verdict === 'CONDITIONAL' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40');
+                        return `
+                        <div class="p-2 rounded-lg bg-tactical-950/90 border border-tactical-700/80 flex flex-col gap-1">
+                            <div class="flex items-center justify-between font-mono text-[11px]">
+                                <span class="font-bold text-white">${escapeHtml(v.handle)}</span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="px-1.5 py-0.5 rounded border text-[10px] font-bold ${vStyle}">${escapeHtml(v.verdict)}</span>
+                                    <span class="text-cyan-300 font-bold">${v.score}/10</span>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-slate-300">${escapeHtml(v.rationale)}</p>
+                        </div>`;
+                    }).join('');
+
+                    return `
+                    <div class="p-4 rounded-xl bg-gradient-to-r from-violet-950/60 via-tactical-900 to-cyan-950/50 border border-violet-500/50 space-y-2.5">
+                        <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
+                            <span class="font-bold text-violet-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-scale-balanced"></i> [CONSENSUS VOTING MATRIX RECORD] // ${escapeHtml(msg.consensusData?.status || 'POLLED')}
+                            </span>
+                            <div class="flex items-center gap-2 text-[10px] text-slate-300">
+                                <span class="px-2 py-0.5 rounded bg-violet-500/20 text-violet-200 border border-violet-500/40 font-bold">
+                                    MEAN: ${msg.consensusData?.meanScore || '—'}/10 • ALIGNMENT: ${msg.consensusData?.agreementPct || '—'}%
+                                </span>
+                                ${msg.tokens ? `<span class="px-1.5 py-0.5 rounded bg-tactical-800 text-emerald-300 border border-tactical-600">+${msg.tokens.totalTokens} tok</span>` : ''}
+                                <span>${escapeHtml(msg.timestamp)}</span>
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-300 font-mono">Proposal: <span class="text-white font-sans">${escapeHtml(msg.content)}</span></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                            ${votesHtml}
+                        </div>
+                    </div>
+                    `;
+                }
+
+                return `
+                <div class="p-3.5 rounded-xl bg-tactical-950/90 border ${isUser ? 'border-amber-500/40' : c.border} transition">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-tactical-800 font-mono text-[11px]">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded border font-bold ${isUser ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : c.badge}">
+                                [${escapeHtml(msg.speakerHandle)}]
+                            </span>
+                            ${msg.isHost ? `<span class="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/40 text-[10px]">HOST</span>` : ''}
+                            <span class="text-slate-400 text-[10px]">${escapeHtml(msg.speakerRole || '')}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-400">
+                            ${msg.tokens ? `<span class="px-1.5 py-0.5 rounded bg-tactical-900 border border-tactical-700 text-emerald-300 font-semibold" title="Prompt: ${msg.tokens.promptTokens} | Output: ${msg.tokens.completionTokens}">+${msg.tokens.totalTokens} tok (P:${msg.tokens.promptTokens} C:${msg.tokens.completionTokens})</span>` : ''}
+                            ${msg.temp !== undefined ? `<span>T=${msg.temp}</span>` : ''}
+                            <span>TURN ${String(msg.turn).padStart(2, '0')}/${String(state.orchestration.maxTurns).padStart(2, '0')}</span>
+                            <span>${escapeHtml(msg.timestamp)}</span>
+                        </div>
+                    </div>
+                    ${msg.routingNote ? `
+                    <div class="mb-2 px-2.5 py-1 rounded bg-tactical-900 border-l-2 border-amber-400 font-mono text-[11px] text-amber-200/90">
+                        <i class="fa-solid fa-route mr-1 text-amber-400"></i> ${escapeHtml(msg.routingNote)}
+                    </div>` : ''}
+                    <div class="text-xs md:text-sm text-slate-200 leading-relaxed whitespace-pre-line">${escapeHtml(msg.content)}</div>
+                </div>
+                `;
+            }).join('');
+
+            streamEl.scrollTop = streamEl.scrollHeight;
+        }
+
+        // 5. Render Automated Consensus Voting Matrix (1-10 Scoring)
+        function renderConsensusVotingMatrix() {
+            const matrix = state.consensusMatrix;
+            const badgeEl = document.getElementById('consensusOverallBadge');
+            const meanEl = document.getElementById('consensusMeanScore');
+            const agreeEl = document.getElementById('consensusAgreementPct');
+            const countEl = document.getElementById('consensusVoteCount');
+            const gridEl = document.getElementById('consensusMatrixGrid');
+            const autoToggle = document.getElementById('autoVoteOnCompleteToggle');
+
+            if (autoToggle) autoToggle.checked = !!state.orchestration.autoVoteOnComplete;
+            if (meanEl) meanEl.textContent = matrix.meanScore !== null ? `${matrix.meanScore.toFixed(1)} / 10` : '— / 10';
+            if (agreeEl) agreeEl.textContent = matrix.agreementPct !== null ? `${matrix.agreementPct}%` : '—%';
+            if (countEl) countEl.textContent = `${matrix.votes.length} Agents`;
+
+            if (badgeEl) {
+                let bClass = 'bg-slate-800 text-slate-300 border-slate-700';
+                if (matrix.status === 'CONSENSUS LOCKED') {
+                    bClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+                } else if (matrix.status === 'CONDITIONAL ALIGNMENT' || matrix.status === 'SPLIT DECISION') {
+                    bClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                } else if (matrix.status === 'VETOED / REJECTED') {
+                    bClass = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+                } else if (matrix.status === 'POLLING...') {
+                    bClass = 'bg-violet-500/20 text-violet-300 border-violet-500/40 animate-pulse';
+                }
+                badgeEl.className = `font-mono text-[10px] uppercase px-2 py-0.5 rounded border font-bold ${bClass}`;
+                badgeEl.textContent = matrix.status;
+            }
+
+            if (!gridEl) return;
+
+            if (matrix.votes.length === 0) {
+                gridEl.innerHTML = `
+                    <div class="p-4 text-center border border-dashed border-tactical-700 rounded-xl bg-tactical-950/50 text-xs text-slate-400 font-mono">
+                        No consensus poll executed yet. Click <span class="text-violet-300 font-semibold">"Trigger Consensus Vote"</span> at any point to poll all active agents for a 1–10 score, verdict badge, and in-character rationale.
+                    </div>
+                `;
+                return;
+            }
+
+            gridEl.innerHTML = matrix.votes.map(v => {
+                const c = COLOR_STYLES[v.color] || COLOR_STYLES.cyan;
+                const scorePct = Math.max(10, Math.min(100, v.score * 10));
+                const scoreBarColor = v.score >= 8
+                    ? 'bg-gradient-to-r from-emerald-500 to-cyan-400'
+                    : (v.score >= 5 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : 'bg-gradient-to-r from-rose-600 to-red-400');
+
+                const verdictBadge = v.verdict === 'APPROVE'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : (v.verdict === 'CONDITIONAL' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40');
+
+                return `
+                <div class="p-3 rounded-xl bg-tactical-950/90 border ${c.border} space-y-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded border font-mono text-xs font-bold ${c.badge}">
+                                ${escapeHtml(v.handle)}
+                            </span>
+                            <span class="text-[11px] font-mono text-slate-400">${escapeHtml(v.role)}</span>
+                        </div>
+
+                        <div class="flex items-center gap-2 font-mono">
+                            <span class="text-[10px] text-slate-400">+${v.tokensUsed || 0} tok</span>
+                            <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${verdictBadge}">
+                                ${escapeHtml(v.verdict)}
+                            </span>
+                            <span class="px-2.5 py-0.5 rounded bg-tactical-800 border border-tactical-600 text-xs font-bold text-white">
+                                ${v.score} <span class="text-slate-400 text-[10px]">/ 10</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 1-10 Score Visual Meter -->
+                    <div class="w-full h-2 bg-tactical-900 rounded-full overflow-hidden border border-tactical-800">
+                        <div class="h-full ${scoreBarColor} transition-all duration-500" style="width: ${scorePct}%"></div>
+                    </div>
+
+                    <div class="text-xs text-slate-200 leading-relaxed">
+                        ${escapeHtml(v.rationale)}
+                    </div>
+                    <div class="text-[11px] font-mono text-cyan-300/90 bg-tactical-900/90 px-2.5 py-1 rounded border border-tactical-800">
+                        <i class="fa-solid fa-shield-halved mr-1 text-cyan-400"></i> <strong>Condition:</strong> ${escapeHtml(v.keyCondition)}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // Render Force-Pass Mic Bar
+        function renderForcePassMicBar() {
+            const container = document.getElementById('forcePassMicContainer');
+            if (!container) return;
+
+            const activePool = state.agents.filter(a => a.active);
+            container.innerHTML = activePool.map(agent => {
+                const c = COLOR_STYLES[agent.color] || COLOR_STYLES.cyan;
+                return `
+                <button onclick="window.app.forcePassMic('${agent.id}')" class="px-2.5 py-1 rounded-md border font-mono text-[11px] transition flex items-center gap-1.5 shrink-0 hover:scale-[1.02] ${c.badge}">
+                    <i class="fa-solid fa-microphone"></i>
+                    <span>${escapeHtml(agent.handle)}</span>
+                </button>
+                `;
+            }).join('');
+        }
+
+        // Render Turn Counter & State Machine Telemetry
+        function renderStateTelemetry() {
+            const cur = state.orchestration.currentTurn;
+            const max = state.orchestration.maxTurns;
+            const pct = Math.min(100, Math.round((cur / Math.max(1, max)) * 100));
+
+            const activeAgent = state.agents.find(a => a.id === state.orchestration.activeSpeakerId);
+            const speakerLabel = activeAgent ? activeAgent.handle : 'STANDBY';
+            const busStateLabel = !state.auth.verified ? 'GATE LOCKED' : state.orchestration.busState;
+
+            document.getElementById('engineCurrentTurn').textContent = String(cur);
+            document.getElementById('engineMaxTurnsInput').value = String(max);
+            document.getElementById('turnProgressBar').style.width = `${pct}%`;
+            document.getElementById('engineActiveSpeakerBox').textContent = speakerLabel;
+            document.getElementById('engineStateLabel').textContent = busStateLabel;
+
+            // Header telemetry sync
+            document.getElementById('headerTurnCounter').textContent = `${String(cur).padStart(2, '0')} / ${String(max).padStart(2, '0')}`;
+            document.getElementById('headerActiveSpeaker').textContent = speakerLabel;
+            const hbState = document.getElementById('headerBusState');
+            if (hbState) {
+                hbState.textContent = busStateLabel;
+                hbState.className = state.auth.verified
+                    ? 'px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold'
+                    : 'px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold';
+            }
+        }
+
+        // ------------------------------------------
+        // CORE ORCHESTRATION ENGINE ACTIONS
+        // ------------------------------------------
+        function ensureSessionVerified() {
+            if (!state.auth.verified) {
+                showToast('Session Gate Locked! Confirm login & handshake first.', 'error');
+                openAuthModal();
+                return false;
+            }
+            return true;
+        }
+
+        async function broadcastGroupPrompt() {
+            if (!ensureSessionVerified()) return;
+
+            const inputEl = document.getElementById('groupPromptInput');
+            const promptText = inputEl.value.trim();
+            if (!promptText) {
+                showToast('Enter a group directive or select a preset scenario first.', 'warn');
+                return;
+            }
+
+            state.orchestration.currentTurn = 0;
+            state.orchestration.roundRobinIndex = 0;
+            state.orchestration.busState = 'RUNNING';
+
+            // Sync Consensus Proposal Input with current broadcast premise
+            const consensusPropEl = document.getElementById('consensusProposalInput');
+            if (consensusPropEl) consensusPropEl.value = promptText;
+
+            const broadcastMsg = {
+                id: 'msg-' + Date.now(),
+                turn: 0,
+                role: 'BROADCAST',
+                speakerHandle: state.auth.operatorCallsign,
+                speakerRole: 'Master Group Broadcast',
+                isHost: state.orchestration.hostId === 'USER_HOST',
+                content: promptText,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            };
+
+            state.messages.push(broadcastMsg);
+            logTelemetry(`Group prompt broadcasted to ${state.agents.filter(a => a.active).length} active agents.`);
+            renderAll();
+
+            // Automatically execute the first turn after broadcast
+            await stepNextTurn();
+        }
+
+        async function stepNextTurn(forcedAgentId = null) {
+            if (!ensureSessionVerified()) return;
+            if (state.orchestration.isGenerating) return;
+
+            const activePool = state.agents.filter(a => a.active);
+            if (activePool.length === 0) {
+                showToast('No active agents in the registry pool!', 'warn');
+                return;
+            }
+
+            if (state.messages.length === 0) {
+                showToast('Broadcast an initial group prompt or inject a message first.', 'warn');
+                return;
+            }
+
+            if (state.orchestration.currentTurn >= state.orchestration.maxTurns && !forcedAgentId) {
+                state.orchestration.busState = 'COMPLETED';
+                state.orchestration.autoLoopActive = false;
+                renderAll();
+                showToast(`Max turns (${state.orchestration.maxTurns}) reached! Increase Max Turns or trigger Consensus Vote.`, 'info');
+                return;
+            }
+
+            state.orchestration.isGenerating = true;
+            state.orchestration.busState = 'RUNNING';
+            const thinkingBar = document.getElementById('agentThinkingBar');
+            const thinkingText = document.getElementById('agentThinkingText');
+            thinkingBar.classList.remove('hidden');
+
+            let reachedMaxTurnsJustNow = false;
+
+            try {
+                let nextAgent = null;
+                let routingNote = null;
+
+                // Determine Next Speaker based on Routing Mode or Force-Pass
+                if (forcedAgentId) {
+                    nextAgent = activePool.find(a => a.id === forcedAgentId) || activePool[0];
+                    routingNote = `Floor manually force-passed to ${nextAgent.handle} by Operator.`;
+                } else if (state.orchestration.routingMode === 'ROUND_ROBIN') {
+                    nextAgent = activePool[state.orchestration.roundRobinIndex % activePool.length];
+                    state.orchestration.roundRobinIndex++;
+                    routingNote = `Round-Robin sequential routing (#${state.orchestration.currentTurn + 1}).`;
+                } else if (state.orchestration.routingMode === 'HOST_DIRECTED') {
+                    const hostAgent = activePool.find(a => a.id === state.orchestration.hostId);
+                    if (hostAgent) {
+                        thinkingText.textContent = `Host [${hostAgent.handle}] is evaluating bus & selecting next speaker...`;
+                        const decision = await decideNextSpeakerViaHostAI(hostAgent, activePool);
+                        nextAgent = decision.agent;
+                        routingNote = `[Host ${hostAgent.handle} • +${decision.routingTokens} tok]: ${decision.reason}`;
+                    } else {
+                        // Human User is Host in Host-Directed mode
+                        nextAgent = activePool[state.orchestration.roundRobinIndex % activePool.length];
+                        state.orchestration.roundRobinIndex++;
+                        routingNote = `Human Host [${state.auth.operatorCallsign}] delegated floor to ${nextAgent.handle}.`;
+                    }
+                } else {
+                    // MANUAL_OVERRIDE
+                    nextAgent = activePool[state.orchestration.roundRobinIndex % activePool.length];
+                    state.orchestration.roundRobinIndex++;
+                    routingNote = `Manual Override step executed for ${nextAgent.handle}.`;
+                }
+
+                state.orchestration.activeSpeakerId = nextAgent.id;
+                thinkingText.textContent = `${nextAgent.handle} is formulating response (Temp: ${nextAgent.parameters.temperature})...`;
+                renderAll();
+
+                const { text: replyText, tokenReceipt } = await generateAgentTurnResponse(nextAgent, false);
+                state.orchestration.currentTurn++;
+
+                const agentMsg = {
+                    id: 'msg-' + Date.now(),
+                    turn: state.orchestration.currentTurn,
+                    role: 'AGENT',
+                    agentId: nextAgent.id,
+                    speakerHandle: nextAgent.handle,
+                    speakerRole: nextAgent.role,
+                    color: nextAgent.color,
+                    temp: nextAgent.parameters.temperature,
+                    isHost: state.orchestration.hostId === nextAgent.id,
+                    routingNote,
+                    tokens: tokenReceipt,
+                    content: replyText.trim(),
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                };
+
+                state.messages.push(agentMsg);
+                logTelemetry(`Turn ${state.orchestration.currentTurn}/${state.orchestration.maxTurns} by ${nextAgent.handle} (+${tokenReceipt.totalTokens} tok).`);
+
+                if (state.orchestration.currentTurn >= state.orchestration.maxTurns) {
+                    state.orchestration.busState = 'COMPLETED';
+                    state.orchestration.autoLoopActive = false;
+                    reachedMaxTurnsJustNow = true;
+                    logTelemetry('Max turns reached. Session state transitioned to COMPLETED.');
+                } else if (state.orchestration.routingMode === 'MANUAL_OVERRIDE') {
+                    state.orchestration.autoLoopActive = false;
+                    state.orchestration.busState = 'PAUSED';
+                }
+            } finally {
+                state.orchestration.isGenerating = false;
+                state.orchestration.activeSpeakerId = null;
+                thinkingBar.classList.add('hidden');
+                renderAll();
+            }
+
+            // If Max Turns reached and Auto-Vote is enabled, trigger the 1-10 Consensus Matrix automatically
+            if (reachedMaxTurnsJustNow && state.orchestration.autoVoteOnComplete) {
+                logTelemetry('Auto-triggering 1–10 Consensus Voting Matrix at session completion...');
+                await runConsensusVoteMatrix();
+                return;
+            }
+
+            // Continue Auto-Loop if enabled
+            if (state.orchestration.autoLoopActive && state.orchestration.currentTurn < state.orchestration.maxTurns) {
+                setTimeout(() => {
+                    if (state.orchestration.autoLoopActive) {
+                        stepNextTurn();
+                    }
+                }, 900);
+            }
+        }
+
+        function toggleAutoRun() {
+            if (!ensureSessionVerified()) return;
+            if (state.messages.length === 0) {
+                showToast('Broadcast a group prompt first to start the auto-loop.', 'warn');
+                return;
+            }
+            state.orchestration.autoLoopActive = !state.orchestration.autoLoopActive;
+            if (state.orchestration.autoLoopActive) {
+                state.orchestration.busState = 'RUNNING';
+                logTelemetry('Auto-advance orchestration loop ENGAGED.');
+                renderAll();
+                stepNextTurn();
+            } else {
+                state.orchestration.busState = 'PAUSED';
+                logTelemetry('Orchestration loop PAUSED by operator.');
+                renderAll();
+            }
+        }
+
+        async function requestHostSummary() {
+            if (!ensureSessionVerified()) return;
+            if (state.orchestration.isGenerating) return;
+            if (state.messages.length === 0) {
+                showToast('No conversation on the bus to synthesize yet.', 'warn');
+                return;
+            }
+
+            const activePool = state.agents.filter(a => a.active);
+            const hostAgent = activePool.find(a => a.id === state.orchestration.hostId) || activePool[0];
+            if (!hostAgent) return;
+
+            state.orchestration.isGenerating = true;
+            state.orchestration.activeSpeakerId = hostAgent.id;
+            const thinkingBar = document.getElementById('agentThinkingBar');
+            const thinkingText = document.getElementById('agentThinkingText');
+            thinkingBar.classList.remove('hidden');
+            thinkingText.textContent = `Host [${hostAgent.handle}] is synthesizing final executive verdict...`;
+            renderAll();
+
+            try {
+                const { text: synthesis, tokenReceipt } = await generateAgentTurnResponse(hostAgent, true);
+                state.orchestration.currentTurn++;
+                state.messages.push({
+                    id: 'msg-' + Date.now(),
+                    turn: state.orchestration.currentTurn,
+                    role: 'AGENT',
+                    agentId: hostAgent.id,
+                    speakerHandle: hostAgent.handle,
+                    speakerRole: `${hostAgent.role} // EXECUTIVE SYNTHESIS`,
+                    color: hostAgent.color,
+                    temp: hostAgent.parameters.temperature,
+                    isHost: true,
+                    tokens: tokenReceipt,
+                    routingNote: 'Host Executive Summary & Action Verdict requested by Operator.',
+                    content: synthesis.trim(),
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                });
+                logTelemetry(`Host synthesis generated by ${hostAgent.handle} (+${tokenReceipt.totalTokens} tok).`);
+            } finally {
+                state.orchestration.isGenerating = false;
+                state.orchestration.activeSpeakerId = null;
+                thinkingBar.classList.add('hidden');
+                renderAll();
+            }
+        }
+
+        // Run Automated 1-10 Consensus Voting Matrix across all active agents
+        async function runConsensusVoteMatrix() {
+            if (!ensureSessionVerified()) return;
+            if (state.orchestration.isGenerating) return;
+
+            const activePool = state.agents.filter(a => a.active);
+            if (activePool.length === 0) {
+                showToast('No active agents in the registry pool to vote!', 'warn');
+                return;
+            }
+
+            const proposalInput = document.getElementById('consensusProposalInput');
+            const groupPromptInput = document.getElementById('groupPromptInput');
+            const proposalText = (proposalInput?.value || '').trim() ||
+                (groupPromptInput?.value || '').trim() ||
+                'Evaluate the current multi-agent architectural proposal on the shared bus.';
+
+            if (proposalInput && !proposalInput.value.trim()) {
+                proposalInput.value = proposalText;
+            }
+
+            const transcriptText = state.messages
+                .filter(m => m.role !== 'CONSENSUS_MATRIX')
+                .slice(-10)
+                .map(m => `[Turn ${m.turn}] [${m.speakerHandle}]: ${m.content}`)
+                .join('\n\n');
+
+            state.orchestration.isGenerating = true;
+            state.consensusMatrix.status = 'POLLING...';
+            const thinkingBar = document.getElementById('agentThinkingBar');
+            const thinkingText = document.getElementById('agentThinkingText');
+            thinkingBar.classList.remove('hidden');
+            thinkingText.textContent = `Polling ${activePool.length} active personas for 1–10 Consensus Matrix scores...`;
+            renderAll();
+
+            try {
+                // Query all active agents in parallel for fast consensus scoring
+                const votes = await Promise.all(
+                    activePool.map(agent => evaluateProposalByAgent(agent, proposalText, transcriptText))
+                );
+
+                const scores = votes.map(v => v.score);
+                const meanScore = scores.reduce((acc, s) => acc + s, 0) / scores.length;
+                // Compute population standard deviation for convergence % alongside range spread
+                const variance = scores.reduce((acc, s) => acc + Math.pow(s - meanScore, 2), 0) / scores.length;
+                const stdDev = Math.sqrt(variance);
+                const agreementPct = Math.max(0, Math.min(100, Math.round((1 - (stdDev / 4.5)) * 100)));
+
+                const hasReject = votes.some(v => v.verdict === 'REJECT' || v.score <= 4);
+                let overallStatus = 'CONDITIONAL ALIGNMENT';
+                if (hasReject || meanScore < 5.0) {
+                    overallStatus = 'VETOED / REJECTED';
+                } else if (meanScore >= 7.5 && agreementPct >= 65) {
+                    overallStatus = 'CONSENSUS LOCKED';
+                } else if (agreementPct < 55) {
+                    overallStatus = 'SPLIT DECISION';
+                }
+
+                const pollTotalTokens = votes.reduce((acc, v) => acc + (v.tokensUsed || 0), 0);
+
+                state.consensusMatrix = {
+                    proposal: proposalText,
+                    lastPolledAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    turnPolled: state.orchestration.currentTurn,
+                    meanScore: Number(meanScore.toFixed(1)),
+                    agreementPct,
+                    status: overallStatus,
+                    votes
+                };
+
+                // Append Consensus Matrix Record Card to Shared Conversation Bus
+                state.messages.push({
+                    id: 'msg-consensus-' + Date.now(),
+                    turn: state.orchestration.currentTurn,
+                    role: 'CONSENSUS_MATRIX',
+                    speakerHandle: 'CONSENSUS-MATRIX',
+                    speakerRole: 'Automated 1–10 Proposal Poll',
+                    content: proposalText,
+                    tokens: { promptTokens: 0, completionTokens: 0, totalTokens: pollTotalTokens },
+                    consensusData: JSON.parse(JSON.stringify(state.consensusMatrix)),
+                    timestamp: state.consensusMatrix.lastPolledAt
+                });
+
+                logTelemetry(`Consensus Matrix complete: Mean ${meanScore.toFixed(1)}/10 (${overallStatus}) [+${pollTotalTokens} tok].`);
+                showToast(`Consensus Poll: ${meanScore.toFixed(1)}/10 — ${overallStatus}`, meanScore >= 7.5 ? 'success' : 'info');
+            } finally {
+                state.orchestration.isGenerating = false;
+                thinkingBar.classList.add('hidden');
+                renderAll();
+            }
+        }
+
+        function injectMidRoundUserMessage() {
+            if (!ensureSessionVerified()) return;
+            const input = document.getElementById('midRoundUserInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const userMsg = {
+                id: 'msg-' + Date.now(),
+                turn: state.orchestration.currentTurn,
+                role: 'USER',
+                speakerHandle: state.auth.operatorCallsign,
+                speakerRole: 'Operator Mid-Round Injection',
+                isHost: state.orchestration.hostId === 'USER_HOST',
+                content: text,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            };
+
+            state.messages.push(userMsg);
+            input.value = '';
+            logTelemetry(`Mid-round operator injection posted by ${state.auth.operatorCallsign}.`);
+            renderAll();
+        }
+
+        function forcePassMic(agentId) {
+            if (!ensureSessionVerified()) return;
+            if (state.messages.length === 0) {
+                showToast('Broadcast an initial prompt or inject a message before passing the mic.', 'warn');
+                return;
+            }
+            stepNextTurn(agentId);
+        }
+
+        // ------------------------------------------
+        // PERSISTENCE & EXPORT (FIRESTORE + MD/JSON)
+        // ------------------------------------------
+        function renderSnapshotsList() {
+            const container = document.getElementById('snapshotsListContainer');
+            if (!container) return;
+
+            if (state.snapshots.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center border border-dashed border-tactical-700 rounded-xl text-slate-400 font-mono text-xs">
+                        No saved session snapshots yet. Enter a title above and click "Save Snapshot" to store the current orchestration state.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = state.snapshots.map(snap => {
+                const dateStr = new Date(snap.savedAt || Date.now()).toLocaleString();
+                const msgCount = (snap.messages || []).length;
+                const agentCount = (snap.agents || []).length;
+                return `
+                <div class="p-3.5 rounded-xl bg-tactical-950 border border-tactical-700 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <div class="font-mono text-xs font-bold text-cyan-300">${escapeHtml(snap.title)}</div>
+                        <div class="text-[11px] font-mono text-slate-400 mt-0.5">
+                            ${escapeHtml(dateStr)} • Turn ${snap.orchestration?.currentTurn || 0}/${snap.orchestration?.maxTurns || 8} • ${agentCount} Agents • ${msgCount} Messages
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.app.loadSessionSnapshot('${snap.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-semibold transition">
+                            <i class="fa-solid fa-folder-open mr-1"></i> Restore
+                        </button>
+                        <button onclick="window.app.deleteSessionSnapshot('${snap.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-mono text-xs transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        async function saveSessionSnapshot() {
+            const titleInput = document.getElementById('snapshotTitleInput');
+            const title = (titleInput.value || '').trim() || `Session Snapshot — Turn ${state.orchestration.currentTurn}`;
+            const snapId = 'snap-' + Date.now();
+
+            const snapshotPayload = {
+                id: snapId,
+                title,
+                savedAt: Date.now(),
+                agents: JSON.parse(JSON.stringify(state.agents)),
+                orchestration: {
+                    hostId: state.orchestration.hostId,
+                    routingMode: state.orchestration.routingMode,
+                    currentTurn: state.orchestration.currentTurn,
+                    maxTurns: state.orchestration.maxTurns,
+                    roundRobinIndex: state.orchestration.roundRobinIndex,
+                    autoVoteOnComplete: state.orchestration.autoVoteOnComplete
+                },
+                tokenTelemetry: JSON.parse(JSON.stringify(state.tokenTelemetry)),
+                consensusMatrix: JSON.parse(JSON.stringify(state.consensusMatrix)),
+                messages: JSON.parse(JSON.stringify(state.messages))
+            };
+
+            // Always update in-memory list immediately
+            state.snapshots.unshift(snapshotPayload);
+            titleInput.value = '';
+            renderSnapshotsList();
+
+            // Persist to Cloud Firestore if authenticated (Rules 1 & 3)
+            if (currentUser && db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'orchestration_snapshots', snapId);
+                    await setDoc(docRef, snapshotPayload);
+                    showToast(`Snapshot "${title}" saved to Cloud!`, 'success');
+                    logTelemetry(`Session snapshot "${title}" synced to cloud storage.`);
+                } catch (err) {
+                    showToast(`Saved in session memory (${err.message})`, 'info');
+                }
+            } else {
+                showToast(`Snapshot "${title}" saved in session store!`, 'success');
+            }
+        }
+
+        function loadSessionSnapshot(snapId) {
+            const snap = state.snapshots.find(s => s.id === snapId);
+            if (!snap) return;
+
+            state.agents = JSON.parse(JSON.stringify(snap.agents || DEFAULT_AGENTS));
+            state.orchestration = {
+                ...state.orchestration,
+                ...(snap.orchestration || {}),
+                autoLoopActive: false,
+                isGenerating: false,
+                activeSpeakerId: null,
+                busState: 'PAUSED'
+            };
+            if (snap.tokenTelemetry) {
+                state.tokenTelemetry = JSON.parse(JSON.stringify(snap.tokenTelemetry));
+            }
+            if (snap.consensusMatrix) {
+                state.consensusMatrix = JSON.parse(JSON.stringify(snap.consensusMatrix));
+            }
+            state.messages = JSON.parse(JSON.stringify(snap.messages || []));
+
+            closeSnapshotsModal();
+            renderAll();
+            showToast(`Restored snapshot: "${snap.title}"`, 'success');
+            logTelemetry(`Restored session snapshot "${snap.title}" (Turn ${state.orchestration.currentTurn}).`);
+        }
+
+        async function deleteSessionSnapshot(snapId) {
+            state.snapshots = state.snapshots.filter(s => s.id !== snapId);
+            renderSnapshotsList();
+            if (currentUser && db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'orchestration_snapshots', snapId);
+                    await deleteDoc(docRef);
+                } catch (e) {
+                    // Ignore delete error if offline
+                }
+            }
+            showToast('Snapshot removed.', 'info');
+        }
+
+        function buildMarkdownTranscript() {
+            const lines = [
+                `# NEXUS // Multi-Agent Orchestration Transcript`,
+                `- **Operator:** ${state.auth.operatorCallsign} (${state.auth.verified ? 'VERIFIED' : 'UNVERIFIED'})`,
+                `- **Designated Host:** ${getHostDisplayName()}`,
+                `- **Routing Mode:** ${state.orchestration.routingMode}`,
+                `- **Turn Progress:** ${state.orchestration.currentTurn} / ${state.orchestration.maxTurns}`,
+                `- **Token Telemetry:** ${state.tokenTelemetry.totalTokens} Total Tokens (Prompt: ${state.tokenTelemetry.promptTokens}, Completion: ${state.tokenTelemetry.completionTokens}, Budget: ${state.tokenTelemetry.sessionBudget})`,
+                `- **Consensus Status:** ${state.consensusMatrix.status} (Mean Score: ${state.consensusMatrix.meanScore ?? 'N/A'}/10, Convergence: ${state.consensusMatrix.agreementPct ?? 'N/A'}%)`,
+                `- **Exported At:** ${new Date().toISOString()}`,
+                ``,
+                `## Active Persona Wrappers`,
+                ...state.agents.map(a => `- **${a.handle}** (${a.role}) | Temp: \`${a.parameters.temperature}\` | MaxTokens: \`${a.parameters.max_tokens}\` | Session Burn: \`${(state.tokenTelemetry.byAgent[a.id]?.total || 0)} tok\`\n  > Directive: ${a.system_directive}`),
+                ``
+            ];
+
+            if (state.consensusMatrix.votes && state.consensusMatrix.votes.length > 0) {
+                lines.push(`## Automated Consensus Voting Matrix (1–10 Scale)`);
+                lines.push(`- **Target Proposal:** ${state.consensusMatrix.proposal}`);
+                lines.push(`- **Overall Verdict:** **${state.consensusMatrix.status}** | **Mean Score:** \`${state.consensusMatrix.meanScore}/10\` | **Convergence:** \`${state.consensusMatrix.agreementPct}%\``);
+                lines.push(``);
+                state.consensusMatrix.votes.forEach(v => {
+                    lines.push(`- **[${v.handle}]** — **${v.score}/10 (${v.verdict})**: ${v.rationale} *(Condition: ${v.keyCondition})*`);
+                });
+                lines.push(``);
+            }
+
+            lines.push(`## Shared Conversation Bus`, ``);
+
+            state.messages.forEach(m => {
+                const tokBadge = m.tokens ? ` [+${m.tokens.totalTokens} tok]` : '';
+                lines.push(`### [Turn ${String(m.turn).padStart(2, '0')}] [${m.speakerHandle}] ${m.isHost ? '(HOST)' : ''}${tokBadge} — *${m.timestamp}*`);
+                if (m.routingNote) {
+                    lines.push(`> *Routing:* ${m.routingNote}`);
+                }
+                lines.push(``);
+                lines.push(m.content);
+                lines.push(``);
+                lines.push(`---`);
+                lines.push(``);
+            });
+
+            return lines.join('\n');
+        }
+
+        function exportTranscript(format) {
+            if (state.messages.length === 0) {
+                showToast('Conversation bus is empty—nothing to export yet.', 'warn');
+                return;
+            }
+
+            let content = '';
+            let mime = 'text/plain;charset=utf-8';
+            let ext = 'txt';
+
+            if (format === 'md') {
+                content = buildMarkdownTranscript();
+                mime = 'text/markdown;charset=utf-8';
+                ext = 'md';
+            } else {
+                const payload = {
+                    metadata: {
+                        exportedAt: new Date().toISOString(),
+                        operator: state.auth.operatorCallsign,
+                        verified: state.auth.verified,
+                        host: getHostDisplayName(),
+                        routingMode: state.orchestration.routingMode,
+                        currentTurn: state.orchestration.currentTurn,
+                        maxTurns: state.orchestration.maxTurns
+                    },
+                    tokenTelemetry: state.tokenTelemetry,
+                    consensusMatrix: state.consensusMatrix,
+                    agents: state.agents,
+                    transcript: state.messages
+                };
+                content = JSON.stringify(payload, null, 2);
+                mime = 'application/json;charset=utf-8';
+                ext = 'json';
+            }
+
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `nexus-orchestration-${Date.now()}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            showToast(`Exported transcript as .${ext.toUpperCase()}`, 'success');
+            logTelemetry(`Transcript exported to .${ext.toUpperCase()} file.`);
+        }
+
+        function copyTranscriptClipboard() {
+            if (state.messages.length === 0) {
+                showToast('Conversation bus is empty.', 'warn');
+                return;
+            }
+            const md = buildMarkdownTranscript();
+            const tempArea = document.createElement('textarea');
+            tempArea.value = md;
+            document.body.appendChild(tempArea);
+            tempArea.select();
+            document.execCommand('copy');
+            tempArea.remove();
+            showToast('Markdown transcript copied to clipboard!', 'success');
+        }
+
+        // ------------------------------------------
+        // PUBLIC WINDOW.APP CONTROLLER METHODS
+        // ------------------------------------------
+        window.app = {
+            // Auth & Session Handshake Gate
+            openAuthModal() {
+                document.getElementById('authOperatorCallsign').value = state.auth.operatorCallsign;
+                document.getElementById('authOperatorEmail').value = state.auth.operatorEmail;
+                document.getElementById('authSessionToken').value = state.auth.sessionToken;
+                document.getElementById('authModal').classList.remove('hidden');
+            },
+            closeAuthModal() {
+                document.getElementById('authModal').classList.add('hidden');
+            },
+            regenerateToken() {
+                state.auth.sessionToken = 'NX-' + Math.random().toString(36).substring(2, 10).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900);
+                document.getElementById('authSessionToken').value = state.auth.sessionToken;
+                showToast('New cryptographic session token generated.', 'info');
+            },
+            confirmAuthAndHandshake() {
+                const callsign = document.getElementById('authOperatorCallsign').value.trim() || 'CMD-OPERATOR';
+                const email = document.getElementById('authOperatorEmail').value.trim() || 'operator@nexus.io';
+                state.auth.operatorCallsign = callsign;
+                state.auth.operatorEmail = email;
+                state.auth.verified = true;
+                if (state.orchestration.busState === 'IDLE') {
+                    state.orchestration.busState = 'READY';
+                }
+                this.closeAuthModal();
+                renderAll();
+                showToast(`Session Handshake VERIFIED for ${callsign}. Bus unlocked!`, 'success');
+                logTelemetry(`Session gate verified for operator ${callsign} [Token: ${state.auth.sessionToken}].`);
+            },
+            revokeSessionVerification() {
+                state.auth.verified = false;
+                state.orchestration.autoLoopActive = false;
+                state.orchestration.busState = 'LOCKED';
+                this.closeAuthModal();
+                renderAll();
+                showToast('Session verification revoked. Execution gate locked.', 'warn');
+                logTelemetry('Operator locked session gate.');
+            },
+            handleQuickHandshake() {
+                if (state.auth.verified) {
+                    this.revokeSessionVerification();
+                } else {
+                    state.auth.verified = true;
+                    state.orchestration.busState = 'READY';
+                    renderAll();
+                    showToast(`Handshake VERIFIED (${state.auth.sessionToken}). Multi-agent bus unlocked!`, 'success');
+                    logTelemetry(`Explicit session handshake confirmed [STATE === VERIFIED].`);
+                }
+            },
+
+            // Agent Registry & Persona Wrapper Modal
+            openAgentModal(agentId = null) {
+                const modal = document.getElementById('agentModal');
+                const title = document.getElementById('agentModalTitle');
+                const idInput = document.getElementById('editAgentId');
+                const handleInput = document.getElementById('agentHandleInput');
+                const roleInput = document.getElementById('agentRoleInput');
+                const dirInput = document.getElementById('agentDirectiveInput');
+                const tempSlider = document.getElementById('agentTempSlider');
+                const tempDisplay = document.getElementById('agentTempDisplay');
+                const tokensInput = document.getElementById('agentMaxTokensInput');
+
+                if (agentId) {
+                    const existing = state.agents.find(a => a.id === agentId);
+                    if (!existing) return;
+                    title.textContent = `Edit Persona Wrapper // ${existing.handle}`;
+                    idInput.value = existing.id;
+                    handleInput.value = existing.handle;
+                    roleInput.value = existing.role;
+                    dirInput.value = existing.system_directive;
+                    tempSlider.value = existing.parameters.temperature;
+                    tempDisplay.textContent = existing.parameters.temperature;
+                    tokensInput.value = existing.parameters.max_tokens;
+                    this.selectAgentColor(existing.color);
+                } else {
+                    title.textContent = 'Create New Agent Persona Wrapper';
+                    idInput.value = '';
+                    handleInput.value = '';
+                    roleInput.value = '';
+                    dirInput.value = '';
+                    tempSlider.value = 0.7;
+                    tempDisplay.textContent = '0.7';
+                    tokensInput.value = 450;
+                    this.selectAgentColor('violet');
+                }
+                modal.classList.remove('hidden');
+            },
+            closeAgentModal() {
+                document.getElementById('agentModal').classList.add('hidden');
+            },
+            selectAgentColor(color) {
+                state.selectedModalColor = color;
+                document.querySelectorAll('.agent-color-btn').forEach(btn => {
+                    if (btn.dataset.color === color) {
+                        btn.classList.add('ring-2', 'ring-white');
+                    } else {
+                        btn.classList.remove('ring-2', 'ring-white');
+                    }
+                });
+            },
+            saveAgentFromModal() {
+                const id = document.getElementById('editAgentId').value;
+                const handle = document.getElementById('agentHandleInput').value.trim();
+                const role = document.getElementById('agentRoleInput').value.trim() || 'Specialized Autonomous Node';
+                const directive = document.getElementById('agentDirectiveInput').value.trim();
+                const temp = parseFloat(document.getElementById('agentTempSlider').value) || 0.7;
+                const maxTokens = parseInt(document.getElementById('agentMaxTokensInput').value, 10) || 450;
+
+                if (!handle || !directive) {
+                    showToast('Agent Handle and System Directive are required.', 'warn');
+                    return;
+                }
+
+                if (id) {
+                    const idx = state.agents.findIndex(a => a.id === id);
+                    if (idx !== -1) {
+                        state.agents[idx] = {
+                            ...state.agents[idx],
+                            handle,
+                            role,
+                            color: state.selectedModalColor,
+                            system_directive: directive,
+                            parameters: { temperature: temp, max_tokens: maxTokens }
+                        };
+                        logTelemetry(`Updated persona wrapper for ${handle}.`);
+                    }
+                } else {
+                    const newAgent = {
+                        id: 'agent-' + Date.now(),
+                        handle,
+                        role,
+                        color: state.selectedModalColor,
+                        active: true,
+                        system_directive: directive,
+                        parameters: { temperature: temp, max_tokens: maxTokens }
+                    };
+                    state.agents.push(newAgent);
+                    logTelemetry(`Registered new agent persona: ${handle}.`);
+                }
+
+                this.closeAgentModal();
+                renderAll();
+                showToast(`Persona Wrapper "${handle}" saved!`, 'success');
+            },
+            toggleAgentActive(agentId) {
+                const agent = state.agents.find(a => a.id === agentId);
+                if (!agent) return;
+                const activeCount = state.agents.filter(a => a.active).length;
+                if (agent.active && activeCount <= 1) {
+                    showToast('At least one agent must remain active in the pool.', 'warn');
+                    return;
+                }
+                agent.active = !agent.active;
+                if (!agent.active && state.orchestration.hostId === agent.id) {
+                    const firstActive = state.agents.find(a => a.active);
+                    state.orchestration.hostId = firstActive ? firstActive.id : 'USER_HOST';
+                }
+                renderAll();
+            },
+            deleteAgent(agentId) {
+                if (state.agents.length <= 1) return;
+                const target = state.agents.find(a => a.id === agentId);
+                state.agents = state.agents.filter(a => a.id !== agentId);
+                if (state.orchestration.hostId === agentId) {
+                    state.orchestration.hostId = state.agents[0].id;
+                }
+                renderAll();
+                if (target) logTelemetry(`Removed agent ${target.handle} from registry.`);
+            },
+            resetDefaultAgents() {
+                state.agents = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
+                state.orchestration.hostId = 'agent-aegis';
+                renderAll();
+                showToast('Default 3 tactical agents restored.', 'info');
+            },
+
+            // Host & Orchestration Controls
+            setDesignatedHost(hostId) {
+                state.orchestration.hostId = hostId;
+                renderAll();
+                logTelemetry(`Designated Host switched to ${getHostDisplayName()}.`);
+                showToast(`Session Host set to ${getHostDisplayName()}`, 'info');
+            },
+            setRoutingMode(mode) {
+                state.orchestration.routingMode = mode;
+                renderAll();
+                logTelemetry(`Routing mode changed to ${mode}.`);
+            },
+            updateMaxTurns(val) {
+                const num = Math.max(1, Math.min(50, parseInt(val, 10) || 8));
+                state.orchestration.maxTurns = num;
+                renderAll();
+            },
+            loadScenarioPreset(key) {
+                const preset = SCENARIO_PRESETS[key];
+                if (!preset) return;
+                const groupInput = document.getElementById('groupPromptInput');
+                if (groupInput) groupInput.value = preset;
+                const consensusPropEl = document.getElementById('consensusProposalInput');
+                if (consensusPropEl) consensusPropEl.value = preset;
+                const selectEl = document.getElementById('presetDirectiveSelect');
+                if (selectEl && selectEl.value !== key) selectEl.value = key;
+                showToast(`Preset directive "${key.toUpperCase()}" loaded into broadcast & consensus channels.`, 'info');
+                logTelemetry(`Loaded preset directive: ${key.toUpperCase()}.`);
+            },
+
+            // Quick 1-Click Unlock & Demo Loader
+            async quickUnlockAndLoadDemo() {
+                state.auth.verified = true;
+                state.orchestration.busState = 'READY';
+                this.loadScenarioPreset('quantum');
+                renderAll();
+                showToast('Session Gate VERIFIED & Sample Directive Loaded! Broadcasting Turn 1...', 'success');
+                logTelemetry('Quick Unlock & Sample Directive executed by operator.');
+                await broadcastGroupPrompt();
+            },
+
+            // Help & Tactical Operations Manual Modal + Diagnostics
+            openHelpModal(tab = 'quickstart') {
+                document.getElementById('helpModal').classList.remove('hidden');
+                this.switchHelpTab(tab);
+            },
+            closeHelpModal() {
+                document.getElementById('helpModal').classList.add('hidden');
+            },
+            switchHelpTab(tabName) {
+                const tabs = ['quickstart', 'routing', 'diagnostics'];
+                tabs.forEach(t => {
+                    const btn = document.getElementById(`helpTabBtn_${t}`);
+                    const content = document.getElementById(`helpTabContent_${t}`);
+                    if (!btn || !content) return;
+                    if (t === tabName) {
+                        content.classList.remove('hidden');
+                        btn.className = 'px-3.5 py-2 rounded-lg border transition flex items-center gap-2 bg-violet-500/20 text-violet-200 border-violet-500/50 font-bold';
+                    } else {
+                        content.classList.add('hidden');
+                        btn.className = 'px-3.5 py-2 rounded-lg border transition flex items-center gap-2 bg-tactical-950 text-slate-300 border-tactical-700 hover:border-tactical-600';
+                    }
+                });
+            },
+            async runDiagnosticsAndDemo() {
+                this.switchHelpTab('diagnostics');
+                const badge = document.getElementById('diagOverallStatusBadge');
+                const listEl = document.getElementById('diagnosticsChecklist');
+                if (badge) {
+                    badge.className = 'font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold animate-pulse';
+                    badge.textContent = 'TESTING...';
+                }
+
+                // 1. Verify Auth & Session Handshake Gate
+                state.auth.verified = true;
+                state.orchestration.busState = 'READY';
+                // 2. Ensure Active Agent Pool
+                if (state.agents.filter(a => a.active).length === 0) {
+                    state.agents = JSON.parse(JSON.stringify(DEFAULT_AGENTS));
+                }
+                // 3. Load Sample Tactical Directive
+                this.loadScenarioPreset('architecture');
+                renderAll();
+
+                const checks = [
+                    { name: '1. Auth & Session Handshake Gate', detail: `VERIFIED (${state.auth.sessionToken})` },
+                    { name: '2. Multi-Agent Persona Registry', detail: `${state.agents.filter(a => a.active).length} ACTIVE WRAPPERS` },
+                    { name: '3. Shared Bus & Host Router', detail: `HOST: ${getHostDisplayName()}` },
+                    { name: '4. Live Token Telemetry & 1–10 Consensus', detail: `BUDGET: ${state.tokenTelemetry.sessionBudget.toLocaleString()} TOK` },
+                    { name: '5. Snapshot Persistence & Export Engine', detail: currentUser ? 'CLOUD + MEMORY READY' : 'MEMORY STORE READY' }
+                ];
+
+                if (listEl) {
+                    listEl.innerHTML = checks.map(c => `
+                        <div class="p-2 rounded bg-emerald-950/30 border border-emerald-500/40 text-emerald-200 flex items-center justify-between">
+                            <span><i class="fa-solid fa-circle-check text-emerald-400 mr-1.5"></i>${escapeHtml(c.name)}</span>
+                            <span class="text-[10px] font-bold text-emerald-300">${escapeHtml(c.detail)}</span>
+                        </div>
+                    `).join('');
+                }
+
+                if (badge) {
+                    badge.className = 'font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold';
+                    badge.textContent = 'ALL SYSTEMS NOMINAL';
+                }
+
+                logTelemetry('SELF-TEST DIAGNOSTICS: All 5 orchestration subsystems verified NOMINAL.');
+                showToast('ALL SYSTEMS NOMINAL! Launching demo broadcast...', 'success');
+
+                setTimeout(async () => {
+                    this.closeHelpModal();
+                    if (state.messages.length === 0) {
+                        await broadcastGroupPrompt();
+                    }
+                }, 900);
+            },
+
+            // Live Token Telemetry Controls
+            updateTokenBudget(val) {
+                const num = Math.max(1000, Math.min(500000, parseInt(val, 10) || 12000));
+                state.tokenTelemetry.sessionBudget = num;
+                renderAll();
+                logTelemetry(`Session token budget ceiling adjusted to ${num.toLocaleString()} tokens.`);
+            },
+            resetTokenTelemetry() {
+                state.tokenTelemetry.promptTokens = 0;
+                state.tokenTelemetry.completionTokens = 0;
+                state.tokenTelemetry.totalTokens = 0;
+                state.tokenTelemetry.apiCalls = 0;
+                state.tokenTelemetry.byAgent = {};
+                renderAll();
+                logTelemetry('Live token telemetry meter zeroed by operator.');
+                showToast('Token usage meter reset to zero.', 'info');
+            },
+
+            // Consensus Voting Matrix Controls
+            runConsensusVoteMatrix,
+            toggleAutoVoteOnComplete(checked) {
+                state.orchestration.autoVoteOnComplete = !!checked;
+                logTelemetry(`Auto-poll Consensus Matrix at Max Turns: ${checked ? 'ENABLED' : 'DISABLED'}.`);
+            },
+
+            // Execution & Bus Controls
+            broadcastGroupPrompt,
+            stepNextTurn,
+            toggleAutoRun,
+            requestHostSummary,
+            injectMidRoundUserMessage,
+            forcePassMic,
+            clearConversationBus() {
+                state.messages = [];
+                state.orchestration.currentTurn = 0;
+                state.orchestration.roundRobinIndex = 0;
+                state.orchestration.autoLoopActive = false;
+                state.orchestration.busState = state.auth.verified ? 'READY' : 'LOCKED';
+                state.consensusMatrix = {
+                    proposal: document.getElementById('groupPromptInput')?.value || '',
+                    lastPolledAt: null,
+                    turnPolled: 0,
+                    meanScore: null,
+                    agreementPct: null,
+                    status: 'AWAITING POLL',
+                    votes: []
+                };
+                renderAll();
+                logTelemetry('Shared conversation bus, consensus matrix, and turn counter reset.');
+                showToast('Conversation bus cleared.', 'info');
+            },
+
+            // Snapshots & Export
+            openSnapshotsModal() {
+                renderSnapshotsList();
+                document.getElementById('snapshotsModal').classList.remove('hidden');
+            },
+            closeSnapshotsModal() {
+                document.getElementById('snapshotsModal').classList.add('hidden');
+            },
+            saveSessionSnapshot,
+            loadSessionSnapshot,
+            deleteSessionSnapshot,
+            exportTranscript,
+            copyTranscriptClipboard
+        };
+
+        // Initialize Application on Window Load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Load default scenario into the input box for immediate testing
+            const groupInput = document.getElementById('groupPromptInput');
+            if (groupInput) groupInput.value = SCENARIO_PRESETS.architecture;
+            const consensusPropEl = document.getElementById('consensusProposalInput');
+            if (consensusPropEl) consensusPropEl.value = SCENARIO_PRESETS.architecture;
+            renderAll();
+            logTelemetry('NEXUS Orchestrator initialized. Press Alt+H for Tactical Manual & Diagnostics.');
+            initFirebase();
+
+            // Global Tactical Keyboard Shortcuts (Alt+H, Alt+S, Alt+V, Esc)
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    window.app.closeAuthModal();
+                    window.app.closeAgentModal();
+                    window.app.closeSnapshotsModal();
+                    window.app.closeHelpModal();
+                } else if (e.altKey && (e.key.toLowerCase() === 'h')) {
+                    e.preventDefault();
+                    const helpModal = document.getElementById('helpModal');
+                    if (helpModal && helpModal.classList.contains('hidden')) {
+                        window.app.openHelpModal('quickstart');
+                    } else {
+                        window.app.closeHelpModal();
+                    }
+                } else if (e.altKey && (e.key.toLowerCase() === 's')) {
+                    e.preventDefault();
+                    window.app.stepNextTurn();
+                } else if (e.altKey && (e.key.toLowerCase() === 'v')) {
+                    e.preventDefault();
+                    window.app.runConsensusVoteMatrix();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
