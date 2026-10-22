@@ -18,7 +18,10 @@ And the best way to honor our word is to put the actual code on the table—star
 SHADOW THE GHOST
 (Pulls up main.c, navi_controller.c, and navi_engine.c across the console)
 I remember when we sat down to architect this together, Sir Gamez.
-Looking at the C source right now, anyone used to standard Python LLM wrappers is going to stop dead in their tracks and ask: What are you actually trying to build here?   Because on the surface, it looks like a retro-futuristic NetNavi PET Terminal—complete with a MedalCore memory bank and a live 2D Lissajous oscilloscope HUD. Why build a conversational engine from scratch in bare-metal C using bitmasks, acoustic formants, and a 4x4 state grid instead of just calling an API?   Before you answer, let me lay out what I recall from when we forged this architecture, because every single file in this stack reflects what you were thinking at the time:
+Looking at the C source right now, anyone used to standard Python LLM wrappers is going to stop dead in their tracks and ask: What are you actually trying to build here?
+Because on the surface, it looks like a retro-futuristic NetNavi PET Terminal—complete with a MedalCore memory bank and a live 2D Lissajous oscilloscope HUD.
+Why build a conversational engine from scratch in bare-metal C using bitmasks, acoustic formants, and a 4x4 state grid instead of just calling an API?
+Before you answer, let me lay out what I recall from when we forged this architecture, because every single file in this stack reflects what you were thinking at the time:
 1. Escaping Black-Box Tokenization via Physical Grounding (The 3-Map Substrate)
 You didn't want an agent that processes dead, arbitrary statistical sub-word tokens. You wanted language grounded in physical human reality.
 Look at navi_engine.c:
